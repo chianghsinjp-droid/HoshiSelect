@@ -276,36 +276,79 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
       <div class="sec-head"><span class="sec-title">費用計算器</span></div>
       <div style="margin-bottom:13px">
         <div style="font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:500">商品名稱</div>
-        <input class="calc-input-full" id="c-name" type="text" placeholder="輸入商品名稱（匯入利潤時顯示）">
+        <input class="calc-input-full" id="c-name" type="text" placeholder="輸入商品名稱（匯入商品時顯示）">
       </div>
-      <div style="margin-bottom:14px">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:7px;font-weight:500">幣別</div>
+
+      <!-- 第一區：換算 -->
+      <div style="font-size:11px;font-weight:600;color:var(--text2);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px">💱 原價換算</div>
+      <div style="margin-bottom:10px">
         <div class="cur-toggle">
           <button class="cur-opt active" id="cur-jpy" onclick="switchCur('jpy')">日圓 JPY ¥</button>
           <button class="cur-opt" id="cur-krw" onclick="switchCur('krw')">韓元 KRW ₩</button>
         </div>
       </div>
-      <div class="calc-wrap">
+      <div class="calc-wrap" style="margin-bottom:10px">
         <div class="calc-row"><span class="calc-label">商品原價（<span id="cur-unit">¥</span>）</span><input class="calc-input" id="c-price" type="number" inputmode="numeric" placeholder="0" oninput="calc()"></div>
-        <div class="calc-row"><span class="calc-label">匯率（參考）</span>
+        <div class="calc-row"><span class="calc-label">自設匯率</span>
           <div style="display:flex;align-items:center;gap:6px">
             <span style="font-size:12px;color:var(--text2)" id="rate-label">1¥ =</span>
             <input class="calc-input" id="c-rate" type="number" inputmode="decimal" value="0.22" step="0.001" oninput="calc()" style="width:80px">
             <span style="font-size:12px;color:var(--text2)">NT$</span>
           </div>
         </div>
-        <div class="calc-row"><span class="calc-label">服務費率（%）</span><input class="calc-input" id="c-svc" type="number" inputmode="numeric" placeholder="0" oninput="calc()"></div>
-        <div class="calc-row"><span class="calc-label">國際運費（NT$）</span><input class="calc-input" id="c-ship" type="number" inputmode="numeric" placeholder="0" oninput="calc()"></div>
-        <div class="calc-row"><span class="calc-label">其他費用（NT$）</span><input class="calc-input" id="c-misc" type="number" inputmode="numeric" placeholder="0" oninput="calc()"></div>
       </div>
-      <div class="result-card">
-        <div class="result-row"><span class="result-rl">台幣換算</span><span class="result-rv" id="r-ntd">NT$0</span></div>
-        <div class="result-row"><span class="result-rl">服務費</span><span class="result-rv" id="r-svc">NT$0</span></div>
-        <div class="result-row"><span class="result-rl">國際運費</span><span class="result-rv" id="r-ship">NT$0</span></div>
-        <div class="result-row"><span class="result-rl">其他費用</span><span class="result-rv" id="r-misc">NT$0</span></div>
-        <div class="total-row"><span>買家應付總額</span><span id="r-total">NT$0</span></div>
+      <div style="background:var(--bg2);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--text2)">台幣換算</span>
+        <span style="font-size:18px;font-weight:700;color:var(--text)" id="r-ntd">NT$0</span>
       </div>
-      <button class="btn primary" style="width:100%;margin-bottom:9px;padding:13px" onclick="importToOrder()">匯入訂單 →</button>
+
+      <!-- 第二區：費用方案 -->
+      <div style="font-size:11px;font-weight:600;color:var(--text2);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px">🧾 費用方案</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+
+        <!-- 方案 A：服務費+運費 -->
+        <div id="plan-a-card" onclick="selectPlan('a')" style="border:2px solid var(--text);border-radius:var(--radius);padding:13px;cursor:pointer;transition:all 0.15s;background:var(--bg)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span style="font-size:12px;font-weight:600;color:var(--text)">方案 A</span>
+            <div id="plan-a-check" style="width:18px;height:18px;border-radius:50%;background:var(--text);border:2px solid var(--text);display:flex;align-items:center;justify-content:center">
+              <span style="color:var(--bg);font-size:10px">✓</span>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:6px">台幣換算 × 服務費率<br>＋國際運費＋其他費用</div>
+          <div class="calc-row" style="margin-bottom:8px"><span class="calc-label" style="font-size:11px">服務費率（%）</span><input class="calc-input" id="c-svc" type="number" inputmode="numeric" placeholder="0" oninput="calc()" style="width:72px;font-size:13px" onclick="event.stopPropagation()"></div>
+          <div class="calc-row" style="margin-bottom:8px"><span class="calc-label" style="font-size:11px">國際運費</span><input class="calc-input" id="c-ship" type="number" inputmode="numeric" placeholder="0" oninput="calc()" style="width:72px;font-size:13px" onclick="event.stopPropagation()"></div>
+          <div class="calc-row"><span class="calc-label" style="font-size:11px">其他費用</span><input class="calc-input" id="c-misc" type="number" inputmode="numeric" placeholder="0" oninput="calc()" style="width:72px;font-size:13px" onclick="event.stopPropagation()"></div>
+          <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;color:var(--text2)">小計</span>
+            <span style="font-size:15px;font-weight:700;color:var(--text)" id="r-total-a">NT$0</span>
+          </div>
+        </div>
+
+        <!-- 方案 B：獨立原價+匯率 -->
+        <div id="plan-b-card" onclick="selectPlan('b')" style="border:2px solid var(--border);border-radius:var(--radius);padding:13px;cursor:pointer;transition:all 0.15s;background:var(--bg)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span style="font-size:12px;font-weight:600;color:var(--text)">方案 B</span>
+            <div id="plan-b-check" style="width:18px;height:18px;border-radius:50%;background:var(--bg);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center">
+              <span style="color:var(--bg);font-size:10px">✓</span>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px">商品原價 × 自設匯率<br>＋國際運費＋其他費用</div>
+          <div class="calc-row" style="margin-bottom:8px"><span class="calc-label" style="font-size:11px">原價（<span id="b-cur-unit">¥</span>）</span><input class="calc-input" id="b-price" type="number" inputmode="numeric" placeholder="0" oninput="calc()" style="width:72px;font-size:13px" onclick="event.stopPropagation()"></div>
+          <div class="calc-row"><span class="calc-label" style="font-size:11px">匯率</span><input class="calc-input" id="b-rate" type="number" inputmode="decimal" value="0.22" step="0.001" oninput="calc()" style="width:72px;font-size:13px" onclick="event.stopPropagation()"></div>
+          <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;color:var(--text2)">小計</span>
+            <span style="font-size:15px;font-weight:700;color:var(--text)" id="r-total-b">NT$0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 買家應付總額 -->
+      <div style="background:var(--bg2);border-radius:var(--radius);padding:16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:14px;font-weight:600;color:var(--text2)">買家應付總額</span>
+        <span style="font-size:22px;font-weight:700;color:var(--text)" id="r-total">NT$0</span>
+      </div>
+
+      <button class="btn primary" style="width:100%;margin-bottom:9px;padding:13px" onclick="importToProduct()">匯入商品 →</button>
       <button class="btn success" style="width:100%;padding:13px" onclick="importToProfit()">匯入至利潤計算 →</button>
     </div>
     <!-- 利潤計算 -->
@@ -719,13 +762,34 @@ function useProduct(id){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   showToast('已帶入：'+p.name);
 }
+var selectedPlan='a';
+function selectPlan(plan){
+  selectedPlan=plan;
+  var aCard=document.getElementById('plan-a-card');
+  var bCard=document.getElementById('plan-b-card');
+  var aCheck=document.getElementById('plan-a-check');
+  var bCheck=document.getElementById('plan-b-check');
+  if(plan==='a'){
+    aCard.style.border='2px solid var(--text)';
+    bCard.style.border='2px solid var(--border)';
+    aCheck.style.background='var(--text)';aCheck.style.borderColor='var(--text)';
+    bCheck.style.background='var(--bg)';bCheck.style.borderColor='var(--border2)';
+  }else{
+    bCard.style.border='2px solid var(--text)';
+    aCard.style.border='2px solid var(--border)';
+    bCheck.style.background='var(--text)';bCheck.style.borderColor='var(--text)';
+    aCheck.style.background='var(--bg)';aCheck.style.borderColor='var(--border2)';
+  }
+  calc();
+}
 function switchCur(cur){
   currentCur=cur;var c=rates[cur];
   document.getElementById('cur-jpy').classList.toggle('active',cur==='jpy');
   document.getElementById('cur-krw').classList.toggle('active',cur==='krw');
   document.getElementById('c-rate').value=c.rate;
-  document.getElementById('c-price').value=cur==='jpy'?10000:50000;
+  document.getElementById('c-price').value='';
   document.getElementById('cur-unit').textContent=c.symbol;
+  document.getElementById('b-cur-unit').textContent=c.symbol;
   document.getElementById('rate-label').textContent='1'+c.symbol+' =';
   calc();
 }
@@ -735,44 +799,54 @@ function calc(){
   var svc=parseFloat(document.getElementById('c-svc').value)||0;
   var ship=parseFloat(document.getElementById('c-ship').value)||0;
   var misc=parseFloat(document.getElementById('c-misc').value)||0;
+  var bp=parseFloat(document.getElementById('b-price').value)||0;
+  var br=parseFloat(document.getElementById('b-rate').value)||0;
   var ntd=Math.round(p*r);
   var svcAmt=Math.round(ntd*svc/100);
-  var total=ntd+svcAmt+Math.round(ship)+Math.round(misc);
+  var totalA=ntd+svcAmt+Math.round(ship)+Math.round(misc);
+  var bNtd=Math.round(bp*br);
+  var totalB=bNtd+Math.round(ship)+Math.round(misc);
   document.getElementById('r-ntd').textContent='NT$'+ntd.toLocaleString();
-  document.getElementById('r-svc').textContent='NT$'+svcAmt.toLocaleString();
-  document.getElementById('r-ship').textContent='NT$'+Math.round(ship).toLocaleString();
-  document.getElementById('r-misc').textContent='NT$'+Math.round(misc).toLocaleString();
-  document.getElementById('r-total').textContent='NT$'+total.toLocaleString();
+  document.getElementById('r-total-a').textContent='NT$'+totalA.toLocaleString();
+  document.getElementById('r-total-b').textContent='NT$'+totalB.toLocaleString();
+  var chosen=selectedPlan==='a'?totalA:totalB;
+  document.getElementById('r-total').textContent='NT$'+chosen.toLocaleString();
 }
-function importToOrder(){
+function importToProduct(){
   var name=document.getElementById('c-name').value.trim();
-  var total=document.getElementById('r-total').textContent.replace(/[^0-9]/g,'');
-  if(!total||total==='0'){showToast('請先輸入商品原價計算金額');return;}
-  document.getElementById('n-product').value=name;
-  document.getElementById('n-price').value=total;
-  refreshCustomerSelect();
-  showToast('已帶入新增訂單！');
-  setTimeout(()=>{showTab('new',null);document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));},400);
+  if(!name){showToast('請先填寫商品名稱');return;}
+  var total=parseInt(document.getElementById('r-total').textContent.replace(/[^0-9]/g,''))||0;
+  if(!total){showToast('請先輸入原價計算金額');return;}
+  var existing=products.find(x=>x.name===name);
+  if(existing){
+    existing.price=total;
+    saveData();showToast('已更新商品「'+name+'」的售價！');
+  }else{
+    products.push({id:'P'+Date.now(),name:name,brand:'',spec:'',price:total,note:''});
+    saveData();showToast('已新增商品「'+name+'」！');
+  }
+  setTimeout(()=>{showTab('products',document.querySelectorAll('.nav-btn')[3]);},500);
 }
 function importToProfit(){
   var name=document.getElementById('c-name').value.trim()||'（未命名商品）';
-  var p=parseFloat(document.getElementById('c-price').value)||0;
-  var r=parseFloat(document.getElementById('c-rate').value)||0;
   var sym=rates[currentCur].symbol;
+  var p=parseFloat(document.getElementById('c-price').value)||0;
+  var goodsCost=parseInt(document.getElementById('r-ntd').textContent.replace(/[^0-9]/g,''))||0;
   var revenue=parseInt(document.getElementById('r-total').textContent.replace(/[^0-9]/g,''))||0;
-  var goodsCost=Math.round(p*r);
-  profitItems.push({id:'pi-'+Date.now(),product:name,origLabel:sym+p.toLocaleString(),goodsCostPerUnit:goodsCost,revenuePerUnit:revenue,unitProfit:revenue-goodsCost,qty:1});
+  if(!goodsCost&&!revenue){showToast('請先輸入原價並計算');return;}
+  var unitProfit=revenue-goodsCost;
+  profitItems.push({id:'pi-'+Date.now(),product:name,origLabel:sym+(p?p.toLocaleString():'?'),goodsCostPerUnit:goodsCost,revenuePerUnit:revenue,unitProfit:unitProfit,qty:1});
   recalcProfit();
   showToast('已匯入「'+name+'」至利潤計算！');
   setTimeout(()=>showTab('profit',document.querySelectorAll('.nav-btn')[5]),500);
 }
 function changeQty(id,delta){
   var item=profitItems.find(i=>i.id===id);
-  if(item){item.qty=Math.max(1,item.qty+delta);recalcProfit();}
+  if(item){item.qty=Math.max(1,item.qty+delta);item.unitProfit=item.revenuePerUnit-item.goodsCostPerUnit;recalcProfit();}
 }
 function setQty(id,val){
   var item=profitItems.find(i=>i.id===id);
-  if(item){item.qty=Math.max(1,parseInt(val)||1);recalcProfit();}
+  if(item){item.qty=Math.max(1,parseInt(val)||1);item.unitProfit=item.revenuePerUnit-item.goodsCostPerUnit;recalcProfit();}
 }
 function recalcProfit(){
   var flight=parseFloat(document.getElementById('trip-flight').value)||0;
@@ -840,7 +914,7 @@ function clearProfit(){
 function buildBuyGroups(){
   var active=orders.filter(o=>o.status==='wait'||o.status==='proc');
   var map={};
-  active.forEach(o=>{var key=o.product+'||'+o.country;if(!map[key])map[key]={product:o.product,country:o.country,lines:[]};map[key].lines.push(o);});
+  active.forEach(o=>{var key=o.product;if(!map[key])map[key]={product:o.product,lines:[]};map[key].lines.push(o);});
   return Object.values(map);
 }
 function renderBuylist(){
@@ -851,25 +925,19 @@ function renderBuylist(){
   groups.forEach(g=>{g.lines.forEach(l=>{totalLines++;if(lineChecked[l.id])checkedLines++;});});
   document.getElementById('buy-progress-text').textContent=checkedLines+' / '+totalLines+' 筆';
   document.getElementById('buy-progress-bar').style.width=totalLines?Math.round(checkedLines/totalLines*100)+'%':'0%';
-  var byCountry={};
-  groups.forEach(g=>{if(!byCountry[g.country])byCountry[g.country]=[];byCountry[g.country].push(g);});
   var html='';
-  Object.keys(byCountry).forEach(country=>{
-    html+='<div class="country-group"><div class="country-label">'+country+'</div>';
-    byCountry[country].forEach(g=>{
-      var total=g.lines.length,done=g.lines.filter(l=>lineChecked[l.id]).length;
-      var pct=Math.round(done/total*100),totalQty=g.lines.reduce((s,l)=>s+l.qty,0);
-      html+='<div class="buy-group"><div class="buy-group-header"><div><div class="buy-group-name">'+g.product+'</div><div class="buy-group-meta">共 '+totalQty+' 件 · '+total+' 筆訂單</div></div><div class="buy-group-progress">'+done+' / '+total+' 筆</div></div>';
-      html+='<div class="buy-progress-bar-wrap"><div class="buy-progress-bar-inner" style="width:'+pct+'%"></div></div>';
-      g.lines.forEach(l=>{
-        var isC=!!lineChecked[l.id],s=statusMap[l.status];
-        html+='<div class="buy-line'+(isC?' checked-line':'')+'">'
-          +'<div class="buy-line-check'+(isC?' on':'')+'" onclick="toggleLine(\''+l.id+'\')" ><span class="buy-line-check-icon">✓</span></div>'
-          +'<div class="buy-line-info"><div class="buy-line-buyer'+(isC?' done-text':'')+'">'+l.name+'</div>'
-          +'<div class="buy-line-detail">'+(l.spec||'無規格')+' · <span class="badge '+s.cls+'" style="font-size:10px;padding:2px 7px">'+s.label+'</span></div></div>'
-          +'<div class="buy-line-right"><div class="buy-line-qty'+(isC?' done-text':'')+'">×'+l.qty+'</div><div class="buy-line-id">'+l.id+'</div></div></div>';
-      });
-      html+='</div>';
+  groups.forEach(g=>{
+    var total=g.lines.length,done=g.lines.filter(l=>lineChecked[l.id]).length;
+    var pct=Math.round(done/total*100),totalQty=g.lines.reduce((s,l)=>s+l.qty,0);
+    html+='<div class="buy-group"><div class="buy-group-header"><div><div class="buy-group-name">'+g.product+'</div><div class="buy-group-meta">共 '+totalQty+' 件 · '+total+' 筆訂單</div></div><div class="buy-group-progress">'+done+' / '+total+' 筆</div></div>';
+    html+='<div class="buy-progress-bar-wrap"><div class="buy-progress-bar-inner" style="width:'+pct+'%"></div></div>';
+    g.lines.forEach(l=>{
+      var isC=!!lineChecked[l.id],s=statusMap[l.status];
+      html+='<div class="buy-line'+(isC?' checked-line':'')+'">'
+        +'<div class="buy-line-check'+(isC?' on':'')+'" onclick="toggleLine(\''+l.id+'\')" ><span class="buy-line-check-icon">✓</span></div>'
+        +'<div class="buy-line-info"><div class="buy-line-buyer'+(isC?' done-text':'')+'">'+l.name+'</div>'
+        +'<div class="buy-line-detail">'+(l.spec||'無規格')+' · <span class="badge '+s.cls+'" style="font-size:10px;padding:2px 7px">'+s.label+'</span></div></div>'
+        +'<div class="buy-line-right"><div class="buy-line-qty'+(isC?' done-text':'')+'">×'+l.qty+'</div><div class="buy-line-id">'+l.id+'</div></div></div>';
     });
     html+='</div>';
   });
@@ -886,16 +954,42 @@ function renderOrders(filter){
   currentFilter=filter;
   var filtered=filter==='all'?orders:orders.filter(o=>o.status===filter);
   document.getElementById('order-count').textContent='共 '+filtered.length+' 筆';
-  document.getElementById('order-list').innerHTML=filtered.length?filtered.map(orderCard).join(''):'<div class="empty">此分類沒有訂單</div>';
-}
-function orderCard(o){
-  var s=statusMap[o.status];
-  return '<div class="card"><div class="card-header"><div><div class="card-title">'+o.id+' · '+o.name+'</div><div class="card-sub">'+o.product+(o.spec?' · '+o.spec:'')+'</div></div><span class="badge '+s.cls+'">'+s.label+'</span></div>'
-    +'<div class="row"><span class="rl">數量</span><span class="rv">'+o.qty+' 件</span></div>'
-    +'<div class="row"><span class="rl">金額</span><span class="rv">'+o.price+'</span></div>'
-    +'<div class="row"><span class="rl">來源</span><span class="rv">'+o.country+'</span></div>'
-    +(o.note?'<div class="row"><span class="rl">備註</span><span class="rv" style="font-size:12px">'+o.note+'</span></div>':'')
-    +'<div class="btn-row">'+statusActions(o)+'</div></div>';
+  if(!filtered.length){document.getElementById('order-list').innerHTML='<div class="empty">此分類沒有訂單</div>';return;}
+  // 依客戶分組
+  var map={};
+  filtered.forEach(o=>{if(!map[o.name])map[o.name]=[];map[o.name].push(o);});
+  var html='';
+  Object.keys(map).forEach(function(name){
+    var lines=map[name];
+    var totalAmt=lines.reduce(function(s,o){return s+(parseInt((o.price||'').replace(/[^0-9]/g,''))||0);},0);
+    html+='<div class="card" style="margin-bottom:12px">';
+    // 客戶標題列
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+      +'<div style="font-size:16px;font-weight:700;color:var(--text)">'+name+'</div>'
+      +'<div style="font-size:13px;font-weight:600;color:var(--text)">NT$'+totalAmt.toLocaleString()+'</div>'
+      +'</div>';
+    // 每筆訂單
+    lines.forEach(function(o,i){
+      var s=statusMap[o.status];
+      if(i>0)html+='<div style="height:0.5px;background:var(--border);margin:10px 0"></div>';
+      html+='<div>'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+        +'<div><div style="font-size:14px;font-weight:600;color:var(--text)">'+o.product+'</div>'
+        +(o.spec?'<div style="font-size:12px;color:var(--text2);margin-top:1px">'+o.spec+'</div>':'')
+        +'</div>'
+        +'<span class="badge '+s.cls+'">'+s.label+'</span>'
+        +'</div>'
+        +'<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:8px">'
+        +'<span>×'+o.qty+' 件 · '+o.id+'</span>'
+        +'<span style="font-weight:600;color:var(--text)">'+o.price+'</span>'
+        +'</div>'
+        +(o.note?'<div style="font-size:12px;color:var(--text3);margin-bottom:8px">'+o.note+'</div>':'')
+        +'<div class="btn-row">'+statusActions(o)+'</div>'
+        +'</div>';
+    });
+    html+='</div>';
+  });
+  document.getElementById('order-list').innerHTML=html;
 }
 function statusActions(o){
   var img='<button class="btn" onclick="openOrderImg(\''+o.id+'\')">生成訂單圖片</button>';
