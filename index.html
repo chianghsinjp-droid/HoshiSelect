@@ -179,6 +179,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
 .btn.danger{background:#FCEBEB;color:#A32D2D;border-color:#F5C6C6}
 /* 客戶資料 */
 .cust-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:15px;margin-bottom:10px}
+.prod-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:15px;margin-bottom:10px}
+.prod-name{font-size:15px;font-weight:600;color:var(--text);margin-bottom:3px}
+.prod-brand{font-size:11px;color:var(--text3);margin-bottom:8px}
+.prod-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.prod-tag{font-size:12px;color:var(--text2);background:var(--bg2);padding:3px 10px;border-radius:20px}
+.prod-price{font-size:17px;font-weight:700;color:var(--text)}
+.prod-note{font-size:12px;color:var(--text3);margin-top:6px;line-height:1.5}
 .cust-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .cust-name{font-size:16px;font-weight:600;color:var(--text)}
 .cust-channel{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500}
@@ -215,7 +222,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
     <button class="nav-btn" onclick="showTab('orders',this)"><span class="nav-icon">📋</span>訂單</button>
     <button class="nav-btn" onclick="showTab('buylist',this)"><span class="nav-icon">🛒</span>採買</button>
     <button class="nav-btn" onclick="showTab('customers',this)"><span class="nav-icon">👥</span>客戶</button>
-    <button class="nav-btn" onclick="showTab('scan',this)"><span class="nav-icon">📷</span>辨識</button>
+    <button class="nav-btn" onclick="showTab('products',this)"><span class="nav-icon">🏷️</span>商品</button>
     <button class="nav-btn" onclick="showTab('calc',this)"><span class="nav-icon">🧮</span>費用</button>
     <button class="nav-btn" onclick="showTab('profit',this)"><span class="nav-icon">💰</span>利潤</button>
   </div>
@@ -256,23 +263,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
       </div>
       <div id="buylist-container"></div>
     </div>
-    <!-- 辨識 -->
-    <div id="tab-scan" class="section">
-      <div class="sec-head"><span class="sec-title">商品辨識</span></div>
-      <div class="cam-upload-area" id="upload-area" onclick="triggerUpload()">
-        <input type="file" id="cam-input" accept="image/*" onchange="onImageSelected(event)" onclick="event.stopPropagation()">
-        <div style="font-size:40px;margin-bottom:12px">📷</div>
-        <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:5px">拍照或選取商品圖片</div>
-        <div style="font-size:13px;color:var(--text2)">點此拍照或從相簿選取</div>
+    <!-- 商品管理 -->
+    <div id="tab-products" class="section">
+      <div class="sec-head">
+        <span class="sec-title">商品列表</span>
+        <button class="btn" style="flex:none;padding:7px 14px;font-size:12px;background:var(--text);color:var(--bg);border-color:transparent" onclick="openProductModal()">＋ 新增</button>
       </div>
-      <img id="cam-preview" class="cam-preview" alt="">
-      <button class="scan-btn" id="scan-btn" onclick="doScan()">✦ 辨識並建立訂單</button>
-      <button class="retake-btn" id="retake-btn" onclick="retake()">重新選取圖片</button>
-      <div class="shimmer-wrap" id="loading-box">
-        <div style="font-size:13px;color:var(--text2);margin-bottom:14px">🔍 正在辨識商品名稱與規格…</div>
-        <div style="display:flex;gap:12px;margin-bottom:12px"><div style="width:56px;height:56px;flex-shrink:0;border-radius:10px" class="shimmer"></div><div style="flex:1"><div class="shimmer" style="height:16px;width:80%;margin-bottom:8px"></div><div class="shimmer" style="height:13px;width:50%"></div></div></div>
-        <div class="shimmer" style="height:13px;width:100%;margin-bottom:7px"></div><div class="shimmer" style="height:13px;width:75%"></div>
-      </div>
+      <div id="product-list"><div class="empty">尚無商品，點右上角新增</div></div>
     </div>
     <!-- 費用計算 -->
     <div id="tab-calc" class="section">
@@ -355,17 +352,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
     <div id="tab-new" class="section">
       <div class="sec-head">
         <span class="sec-title">建立新訂單</span>
-        <span id="scan-source-tag" style="display:none;font-size:11px;background:#E1F5EE;color:#0F6E56;padding:3px 10px;border-radius:20px;font-weight:500">由辨識帶入</span>
       </div>
       <div class="form-group"><label class="form-label">訂購人</label>
         <select class="form-select" id="n-name">
           <option value="">— 請選擇客戶 —</option>
         </select>
       </div>
-      <div class="form-group"><label class="form-label">商品名稱</label><input class="form-input" id="n-product" type="text" placeholder="如：Nike Air Max 95"></div>
+      <div class="form-group"><label class="form-label">商品</label>
+        <select class="form-select" id="n-product" onchange="onProductSelect()">
+          <option value="">— 請選擇商品 —</option>
+        </select>
+      </div>
       <div class="two-col">
         <div class="form-group"><label class="form-label">數量</label><input class="form-input" id="n-qty" type="number" inputmode="numeric" min="1" value="1"></div>
-        <div class="form-group"><label class="form-label">規格（選填）</label><input class="form-input" id="n-spec" type="text" placeholder="如：US10 黑"></div>
+        <div class="form-group"><label class="form-label">規格</label><input class="form-input" id="n-spec" type="text" placeholder="如：US10 黑"></div>
       </div>
       <div class="form-group"><label class="form-label">價格（NT$）</label><input class="form-input" id="n-price" type="number" inputmode="numeric" placeholder="0"></div>
       <div class="form-group"><label class="form-label">備註</label><input class="form-input" id="n-note" type="text" placeholder="顏色、連結、特殊需求…"></div>
@@ -400,6 +400,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
   </div>
 </div>
 <div class="toast" id="toast"></div>
+
+<!-- 商品新增/編輯 Modal -->
+<div class="cust-modal-overlay" id="prod-modal" style="display:none" onclick="if(event.target===this)closeProdModal()">
+  <div class="cust-modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title"><span id="prod-modal-title">新增商品</span><button class="modal-close" onclick="closeProdModal()">關閉</button></div>
+    <div class="form-group"><label class="form-label">商品名稱</label><input class="form-input" id="pm-name" type="text" placeholder="如：Nike Air Max 95"></div>
+    <div class="form-group"><label class="form-label">規格（選填）</label><input class="form-input" id="pm-spec" type="text" placeholder="如：黑色 US9、深棕色"></div>
+    <div class="form-group"><label class="form-label">售價（NT$）</label><input class="form-input" id="pm-price" type="number" inputmode="numeric" placeholder="0"></div>
+    <div class="form-group"><label class="form-label">品牌（選填）</label><input class="form-input" id="pm-brand" type="text" placeholder="如：Nike、Loewe"></div>
+    <div class="form-group"><label class="form-label">備註（選填）</label><textarea class="form-input" id="pm-note" rows="2" placeholder="商品連結、注意事項…" style="resize:none;line-height:1.6"></textarea></div>
+    <input type="hidden" id="pm-edit-id">
+    <button class="btn primary" style="width:100%;padding:14px;font-size:14px;margin-top:4px" onclick="saveProduct()">儲存商品</button>
+  </div>
+</div>
 
 <!-- 客戶新增/編輯 Modal -->
 <div class="cust-modal-overlay" id="cust-modal" style="display:none" onclick="if(event.target===this)closeCustModal()">
@@ -455,8 +470,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
 var lineChecked={},currentFilter='all',currentCur='jpy';
 var rates={jpy:{rate:0.22,symbol:'¥'},krw:{rate:0.023,symbol:'₩'}};
 var statusMap={wait:{label:'待付款',cls:'b-wait',color:'#EF9F27'},proc:{label:'採購中',cls:'b-proc',color:'#378ADD'},ship:{label:'出貨中',cls:'b-ship',color:'#7F77DD'},done:{label:'已完成',cls:'b-done',color:'#1D9E75'}};
-var scanResult={name:'',country:''};
-var currentImageB64='';
 var profitItems=[];
 var extraCosts=[];
 var channelMap={line:{label:'官方 LINE',cls:'ch-line'},ig:{label:'Instagram',cls:'ch-ig'},fb:{label:'Facebook',cls:'ch-fb'},friend:{label:'親友介紹',cls:'ch-friend'}};
@@ -465,22 +478,19 @@ var editingCustId=null;
 
 /* ── 預設資料（首次使用時載入）── */
 var defaultOrders=[
-  {id:'ORD-091',name:'陳大華',product:'Bottega Veneta 錢包',qty:1,spec:'深棕',country:'義大利 🇮🇹',price:'NT$28,400',status:'ship',note:'3/31 已出貨 SF1234567890',date:'2026/03/29'},
-  {id:'ORD-090',name:'林美美',product:'Charlotte Tilbury 唇膏組',qty:3,spec:'各色',country:'英國 🇬🇧',price:'NT$3,600',status:'proc',note:'',date:'2026/03/30'},
-  {id:'ORD-089',name:'王小明',product:'Nike Air Max 95',qty:2,spec:'US10 黑',country:'美國 🇺🇸',price:'NT$7,200',status:'wait',note:'',date:'2026/03/31'},
-  {id:'ORD-088',name:'李小花',product:'Loewe 托特包',qty:1,spec:'奶白',country:'法國 🇫🇷',price:'NT$38,500',status:'wait',note:'已付訂金',date:'2026/03/31'},
-  {id:'ORD-087',name:'黃大仁',product:'AirPods Pro 2',qty:2,spec:'',country:'美國 🇺🇸',price:'NT$5,900',status:'proc',note:'',date:'2026/03/28'},
-  {id:'ORD-086',name:'張小芸',product:'Nike Air Max 95',qty:1,spec:'US7 白',country:'美國 🇺🇸',price:'NT$3,600',status:'wait',note:'',date:'2026/03/31'},
-  {id:'ORD-085',name:'吳偉明',product:'Charlotte Tilbury 唇膏組',qty:2,spec:'#14',country:'英國 🇬🇧',price:'NT$2,400',status:'proc',note:'',date:'2026/03/30'},
+  {id:'ORD-091',name:'陳大華',product:'Bottega Veneta 錢包',qty:1,spec:'深棕',country:'',price:'NT$28,400',status:'ship',note:'3/31 已出貨 SF1234567890',date:'2026/03/29'},
+  {id:'ORD-090',name:'林美美',product:'Charlotte Tilbury 唇膏組',qty:3,spec:'各色',country:'',price:'NT$3,600',status:'proc',note:'',date:'2026/03/30'},
+  {id:'ORD-089',name:'王小明',product:'Nike Air Max 95',qty:2,spec:'US10 黑',country:'',price:'NT$7,200',status:'wait',note:'',date:'2026/03/31'},
 ];
 var defaultCustomers=[
   {id:'C001',name:'陳大華',channel:'line',contact:'@dh_chen',note:''},
   {id:'C002',name:'林美美',channel:'ig',contact:'@meimei_lin',note:''},
   {id:'C003',name:'王小明',channel:'friend',contact:'',note:'透過李小花介紹'},
-  {id:'C004',name:'李小花',channel:'line',contact:'@xiaohua',note:''},
-  {id:'C005',name:'黃大仁',channel:'fb',contact:'黃大仁',note:''},
-  {id:'C006',name:'張小芸',channel:'ig',contact:'@xiaoyun',note:''},
-  {id:'C007',name:'吳偉明',channel:'line',contact:'@wei_wu',note:''},
+];
+var defaultProducts=[
+  {id:'P001',name:'Nike Air Max 95',brand:'Nike',spec:'',price:3600,note:''},
+  {id:'P002',name:'Charlotte Tilbury 唇膏組',brand:'Charlotte Tilbury',spec:'',price:1200,note:''},
+  {id:'P003',name:'Bottega Veneta 錢包',brand:'Bottega Veneta',spec:'深棕色',price:28400,note:''},
 ];
 
 /* ── localStorage 讀寫 ── */
@@ -488,18 +498,22 @@ function saveData(){
   try{
     localStorage.setItem('hoshi_orders',JSON.stringify(orders));
     localStorage.setItem('hoshi_customers',JSON.stringify(customers));
+    localStorage.setItem('hoshi_products',JSON.stringify(products));
   }catch(e){}
 }
-var orders,customers;
+var orders,customers,products;
 function loadData(){
   try{
     var o=localStorage.getItem('hoshi_orders');
     var c=localStorage.getItem('hoshi_customers');
+    var p=localStorage.getItem('hoshi_products');
     orders=o?JSON.parse(o):defaultOrders;
     customers=c?JSON.parse(c):defaultCustomers;
+    products=p?JSON.parse(p):defaultProducts;
   }catch(e){
     orders=defaultOrders;
     customers=defaultCustomers;
+    products=defaultProducts;
   }
 }
 loadData();
@@ -514,7 +528,8 @@ function showTab(t,btn){
   if(t==='buylist')renderBuylist();
   if(t==='profit')recalcProfit();
   if(t==='customers')renderCustomers();
-  if(t==='new')refreshCustomerSelect();
+  if(t==='products')renderProducts();
+  if(t==='new'){refreshCustomerSelect();refreshProductSelect();}
   window.scrollTo(0,0);
 }
 
@@ -597,6 +612,112 @@ function refreshCustomerSelect(){
     sel.appendChild(opt);
   });
   if(prev)sel.value=prev;
+}
+function refreshProductSelect(){
+  var sel=document.getElementById('n-product');
+  var prev=sel.value;
+  sel.innerHTML='<option value="">— 請選擇商品 —</option>';
+  products.forEach(function(p){
+    var opt=document.createElement('option');
+    opt.value=p.id;
+    opt.textContent=p.name+(p.spec?' · '+p.spec:'');
+    sel.appendChild(opt);
+  });
+  if(prev)sel.value=prev;
+}
+function onProductSelect(){
+  var id=document.getElementById('n-product').value;
+  var p=products.find(x=>x.id===id);
+  if(p){
+    document.getElementById('n-spec').value=p.spec||'';
+    document.getElementById('n-price').value=p.price||'';
+  }else{
+    document.getElementById('n-spec').value='';
+    document.getElementById('n-price').value='';
+  }
+}
+
+/* ── 商品管理 ── */
+function renderProducts(){
+  var el=document.getElementById('product-list');
+  if(!products.length){el.innerHTML='<div class="empty">尚無商品，點右上角新增</div>';return;}
+  el.innerHTML=products.map(function(p){
+    var orderCount=orders.filter(o=>o.productId===p.id).length;
+    return '<div class="prod-card">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">'
+      +'<div><div class="prod-name">'+p.name+'</div>'
+      +(p.brand?'<div class="prod-brand">'+p.brand+'</div>':'')+' </div>'
+      +'<div class="prod-price">NT$'+(p.price?Number(p.price).toLocaleString():'—')+'</div></div>'
+      +'<div class="prod-meta">'
+      +(p.spec?'<span class="prod-tag">'+p.spec+'</span>':'')
+      +'<span class="prod-tag">已建立 '+orderCount+' 筆訂單</span>'
+      +'</div>'
+      +(p.note?'<div class="prod-note">'+p.note+'</div>':'')
+      +'<div class="cust-actions">'
+      +'<button class="btn" onclick="editProduct(\''+p.id+'\')">編輯</button>'
+      +'<button class="btn" style="background:var(--text);color:var(--bg);border-color:transparent" onclick="useProduct(\''+p.id+'\')">建立訂單</button>'
+      +'<button class="btn danger" onclick="deleteProduct(\''+p.id+'\')">刪除</button>'
+      +'</div></div>';
+  }).join('');
+}
+function openProductModal(id){
+  document.getElementById('prod-modal-title').textContent=id?'編輯商品':'新增商品';
+  document.getElementById('pm-name').value='';
+  document.getElementById('pm-spec').value='';
+  document.getElementById('pm-price').value='';
+  document.getElementById('pm-brand').value='';
+  document.getElementById('pm-note').value='';
+  document.getElementById('pm-edit-id').value=id||'';
+  if(id){
+    var p=products.find(x=>x.id===id);
+    if(p){
+      document.getElementById('pm-name').value=p.name||'';
+      document.getElementById('pm-spec').value=p.spec||'';
+      document.getElementById('pm-price').value=p.price||'';
+      document.getElementById('pm-brand').value=p.brand||'';
+      document.getElementById('pm-note').value=p.note||'';
+    }
+  }
+  document.getElementById('prod-modal').style.display='flex';
+}
+function editProduct(id){openProductModal(id);}
+function closeProdModal(){document.getElementById('prod-modal').style.display='none';}
+function saveProduct(){
+  var name=document.getElementById('pm-name').value.trim();
+  if(!name){showToast('請輸入商品名稱');return;}
+  var id=document.getElementById('pm-edit-id').value;
+  var data={
+    name:name,
+    spec:document.getElementById('pm-spec').value.trim(),
+    price:parseInt(document.getElementById('pm-price').value)||0,
+    brand:document.getElementById('pm-brand').value.trim(),
+    note:document.getElementById('pm-note').value.trim()
+  };
+  if(id){
+    var p=products.find(x=>x.id===id);
+    if(p)Object.assign(p,data);
+  }else{
+    data.id='P'+Date.now();
+    products.push(data);
+  }
+  closeProdModal();renderProducts();refreshProductSelect();saveData();
+  showToast(id?'商品已更新':'商品已新增！');
+}
+function deleteProduct(id){
+  var p=products.find(x=>x.id===id);if(!p)return;
+  pendingDeleteId=null;pendingDeleteCustId=null;pendingDeleteProdId=id;
+  document.getElementById('del-modal-sub').textContent='將刪除商品「'+p.name+'」，此操作無法復原。';
+  document.getElementById('del-modal').style.display='flex';
+}
+function useProduct(id){
+  var p=products.find(x=>x.id===id);if(!p)return;
+  refreshCustomerSelect();refreshProductSelect();
+  document.getElementById('n-product').value=id;
+  document.getElementById('n-spec').value=p.spec||'';
+  document.getElementById('n-price').value=p.price||'';
+  showTab('new',null);
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  showToast('已帶入：'+p.name);
 }
 function switchCur(cur){
   currentCur=cur;var c=rates[cur];
@@ -825,101 +946,25 @@ function renderOrderImg(){
     showToast('長按圖片即可儲存到相簿！');
   }).catch(function(){showToast('生成失敗，請截圖儲存');});
 }
-function triggerUpload(){document.getElementById('cam-input').click();}
-function onImageSelected(e){
-  var file=e.target.files[0];if(!file)return;
-  var reader=new FileReader();
-  reader.onload=function(ev){
-    currentImageB64=ev.target.result;
-    var p=document.getElementById('cam-preview');p.src=currentImageB64;p.style.display='block';
-    document.getElementById('upload-area').style.display='none';
-    document.getElementById('scan-btn').style.display='block';
-    document.getElementById('retake-btn').style.display='block';
-  };reader.readAsDataURL(file);
-}
-function retake(){
-  currentImageB64='';
-  ['cam-preview','loading-box'].forEach(id=>document.getElementById(id).style.display='none');
-  document.getElementById('upload-area').style.display='block';
-  document.getElementById('scan-btn').style.display='none';
-  document.getElementById('retake-btn').style.display='none';
-  document.getElementById('cam-input').value='';
-}
-async function compressForScan(b64){
-  return new Promise(function(resolve){
-    var img=new Image();
-    img.onload=function(){
-      var canvas=document.createElement('canvas');
-      var max=1024;
-      var w=img.width,h=img.height;
-      if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
-      canvas.width=w;canvas.height=h;
-      canvas.getContext('2d').drawImage(img,0,0,w,h);
-      resolve(canvas.toDataURL('image/jpeg',0.82));
-    };
-    img.onerror=function(){resolve(b64);};
-    img.src=b64;
-  });
-}
-async function doScan(){
-  if(!currentImageB64){showToast('請先選取圖片');return;}
-  var btn=document.getElementById('scan-btn');btn.disabled=true;btn.textContent='處理中…';
-  document.getElementById('loading-box').style.display='block';
-  try{
-    var compressed=await compressForScan(currentImageB64);
-    var b64=compressed.split(',')[1];
-    var resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,
-        messages:[{role:'user',content:[
-          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
-          {type:'text',text:'請分析這張商品圖片，只回傳JSON，不要其他文字：{"name":"商品完整名稱（繁體中文）","spec":"規格描述，如顏色、尺寸、型號等，若無法辨識則留空字串"}\n\n例如：{"name":"Nike Air Force 1 Low","spec":"白色 US9"}'}
-        ]}]})});
-    if(!resp.ok){var e=await resp.json().catch(()=>({}));throw new Error((e.error&&e.error.message)||'HTTP '+resp.status);}
-    var data=await resp.json();
-    var raw=(data.content||[]).map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
-    var match=raw.match(/\{[\s\S]*\}/);
-    if(!match)throw new Error('格式錯誤');
-    var r=JSON.parse(match[0]);
-    document.getElementById('loading-box').style.display='none';
-    document.getElementById('n-product').value=r.name||'';
-    document.getElementById('n-spec').value=r.spec||'';
-    document.getElementById('scan-source-tag').style.display='inline-block';
-    refreshCustomerSelect();
-    retake();
-    showToast('✓ 已帶入：'+(r.name||'商品'));
-    setTimeout(()=>{showTab('new',null);document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));},500);
-  }catch(err){
-    document.getElementById('loading-box').style.display='none';
-    var m=err.message||'';
-    if(m.includes('401'))showToast('API 授權失敗');
-    else if(m.includes('429'))showToast('請求過於頻繁，請稍後再試');
-    else showToast('辨識失敗，請重試');
-  }
-  finally{btn.disabled=false;btn.textContent='✦ 辨識並建立訂單';}
-}
-function fillOrderFromScan(){
-  document.getElementById('scan-source-tag').style.display='inline-block';
-  showTab('new',null);
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-}
-function autoFillCalc(){
-  var p=parseFloat(document.getElementById('n-price').value)||0,r=parseFloat(document.getElementById('n-currency').value)||0.22;
-  var ntd=Math.round(p*r);
-  document.getElementById('n-preview').textContent='NT$'+(ntd+Math.round(ntd*0.08)+350).toLocaleString();
-}
 function createOrder(){
-  var name=document.getElementById('n-name').value.trim(),product=document.getElementById('n-product').value.trim();
-  if(!name||!product){showToast('請選擇訂購人並填寫商品名稱');return;}
-  var id='ORD-0'+(92+orders.length);
+  var name=document.getElementById('n-name').value.trim();
+  var productId=document.getElementById('n-product').value;
+  if(!name||!productId){showToast('請選擇訂購人和商品');return;}
+  var prod=products.find(x=>x.id===productId);
+  var productName=prod?prod.name:productId;
+  var id='ORD-'+(Date.now()%100000);
   var total=parseInt(document.getElementById('n-price').value)||0;
-  orders.unshift({id:id,name:name,product:product,qty:parseInt(document.getElementById('n-qty').value)||1,
+  var today=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'/');
+  orders.unshift({id:id,name:name,product:productName,productId:productId,
+    qty:parseInt(document.getElementById('n-qty').value)||1,
     spec:document.getElementById('n-spec').value,country:'',
-    price:'NT$'+total.toLocaleString(),status:'wait',note:document.getElementById('n-note').value,date:'2026/04/01'});
+    price:'NT$'+total.toLocaleString(),status:'wait',
+    note:document.getElementById('n-note').value,date:today});
   saveData();showToast('訂單 '+id+' 已建立！');
-  document.getElementById('scan-source-tag').style.display='none';
   document.getElementById('n-name').value='';
-  ['n-product','n-spec','n-price','n-note'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('n-product').value='';
+  ['n-spec','n-price','n-note'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('n-qty').value='1';
   setTimeout(()=>showTab('orders',document.querySelectorAll('.nav-btn')[1]),600);
 }
 function renderRecent(){
@@ -937,14 +982,18 @@ function showToast(msg){
 }
 var pendingDeleteId=null;
 var pendingDeleteCustId=null;
+var pendingDeleteProdId=null;
 function confirmDelete(id){
   var o=orders.find(x=>x.id===id);if(!o)return;
-  pendingDeleteCustId=null;
+  pendingDeleteCustId=null;pendingDeleteProdId=null;
   pendingDeleteId=id;
   document.getElementById('del-modal-sub').textContent='將刪除「'+o.id+' · '+o.name+'」的訂單，此操作無法復原。';
   document.getElementById('del-modal').style.display='flex';
 }
-function closeDelModal(){pendingDeleteId=null;pendingDeleteCustId=null;document.getElementById('del-modal').style.display='none';}
+function closeDelModal(){
+  pendingDeleteId=null;pendingDeleteCustId=null;pendingDeleteProdId=null;
+  document.getElementById('del-modal').style.display='none';
+}
 function doDelete(){
   if(pendingDeleteId){
     orders=orders.filter(o=>o.id!==pendingDeleteId);
@@ -952,9 +1001,12 @@ function doDelete(){
   }else if(pendingDeleteCustId){
     customers=customers.filter(x=>x.id!==pendingDeleteCustId);
     closeDelModal();renderCustomers();refreshCustomerSelect();saveData();showToast('客戶已刪除');
+  }else if(pendingDeleteProdId){
+    products=products.filter(x=>x.id!==pendingDeleteProdId);
+    closeDelModal();renderProducts();refreshProductSelect();saveData();showToast('商品已刪除');
   }
 }
-renderRecent();calc();refreshCustomerSelect();
+renderRecent();calc();refreshCustomerSelect();refreshProductSelect();
 document.getElementById('home-date').textContent=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
 </script>
 </body>
