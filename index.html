@@ -1417,7 +1417,7 @@ function statusActions(o){
 }
 function updateStatus(id,ns){
   var o=orders.find(x=>x.id===id);
-  if(o){o.status=ns;renderOrders(currentFilter);renderRecent();saveData();showToast('狀態已更新為：'+statusMap[ns].label);}
+  if(o){o.status=ns;renderOrders(currentFilter);saveData();showToast('狀態已更新為：'+statusMap[ns].label);}
 }
 function filterOrders(f,btn){
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
@@ -1429,9 +1429,9 @@ function openGroupOrderImg(key){
   var cat=parts[1]||'';
   var groupOrders=orders.filter(function(o){
     var oCat=o.category||'（無分類）';
-    return o.name===name&&oCat===cat;
+    return o.name===name&&oCat===cat&&o.status==='proc';
   });
-  if(!groupOrders.length)return;
+  if(!groupOrders.length){showToast('此分類沒有待確認的訂單');return;}
   var totalAmt=groupOrders.reduce(function(s,o){return s+(parseInt((o.price||'').replace(/[^0-9]/g,''))||0);},0);
   document.getElementById('oic-name').textContent=name;
   document.getElementById('oic-category').textContent=cat!=='（無分類）'?cat:'Hoshi Select';
