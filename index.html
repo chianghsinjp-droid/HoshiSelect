@@ -271,13 +271,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
           <button class="btn" style="flex:none;padding:10px 14px;font-size:12px" onclick="openCategoryModal()">管理</button>
         </div>
       </div>
-      <div class="two-col">
-        <div class="form-group"><label class="form-label">數量</label><input class="form-input" id="n-qty" type="number" inputmode="numeric" min="1" value="1" oninput="recalcOrderPrice()"></div>
-        <div class="form-group"><label class="form-label">規格</label><input class="form-input" id="n-spec" type="text" placeholder="如：US10 黑"></div>
+      <!-- 規格＋數量（可多筆）-->
+      <div class="form-group">
+        <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
+          <span>規格 / 數量</span>
+          <button type="button" onclick="addSpecRow()" style="background:none;border:none;font-size:12px;color:var(--blue);cursor:pointer;padding:0;font-weight:500">＋ 新增規格</button>
+        </label>
+        <div id="spec-rows">
+          <!-- 第一列固定 -->
+          <div class="spec-row" style="display:flex;gap:8px;margin-bottom:8px">
+            <input class="form-input" id="n-spec" type="text" placeholder="規格（如：黑色 US9）" style="flex:2">
+            <input class="form-input" id="n-qty" type="number" inputmode="numeric" min="1" value="1" placeholder="數量" style="flex:1" oninput="recalcOrderPrice()">
+          </div>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label" style="display:flex;justify-content:space-between">
-          <span>價格（NT$）</span>
+          <span>單價（NT$）</span>
           <span id="n-unit-price-hint" style="color:var(--text3);font-weight:400"></span>
         </label>
         <input class="form-input" id="n-price" type="number" inputmode="numeric" placeholder="0">
@@ -484,9 +494,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
     <div class="modal-handle"></div>
     <div class="modal-title"><span id="prod-modal-title">新增商品</span><button class="modal-close" onclick="closeProdModal()">關閉</button></div>
     <div class="form-group"><label class="form-label">商品名稱</label><input class="form-input" id="pm-name" type="text" placeholder="如：Nike Air Max 95"></div>
-    <div class="form-group"><label class="form-label">規格（選填）</label><input class="form-input" id="pm-spec" type="text" placeholder="如：黑色 US9、深棕色"></div>
-    <div class="form-group"><label class="form-label">售價（NT$）</label><input class="form-input" id="pm-price" type="number" inputmode="numeric" placeholder="0"></div>
     <div class="form-group"><label class="form-label">品牌（選填）</label><input class="form-input" id="pm-brand" type="text" placeholder="如：Nike、Loewe"></div>
+    <!-- 規格列（新增模式可多筆，編輯模式只顯示一筆）-->
+    <div class="form-group">
+      <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
+        <span>規格 / 售價</span>
+        <button type="button" id="pm-add-spec-btn" onclick="addProdSpecRow()" style="background:none;border:none;font-size:12px;color:var(--blue);cursor:pointer;padding:0;font-weight:500">＋ 新增規格</button>
+      </label>
+      <div id="pm-spec-rows">
+        <div class="pm-spec-row" style="display:flex;gap:8px;margin-bottom:8px">
+          <input class="form-input" id="pm-spec" type="text" placeholder="規格（如：黑色 US9）" style="flex:2">
+          <input class="form-input" id="pm-price" type="number" inputmode="numeric" placeholder="售價 NT$" style="flex:1">
+        </div>
+      </div>
+    </div>
     <div class="form-group"><label class="form-label">備註（選填）</label><textarea class="form-input" id="pm-note" rows="2" placeholder="商品連結、注意事項…" style="resize:none;line-height:1.6"></textarea></div>
     <input type="hidden" id="pm-edit-id">
     <button class="btn primary" style="width:100%;padding:14px;font-size:14px;margin-top:4px" onclick="saveProduct()">儲存商品</button>
@@ -790,6 +811,36 @@ function refreshProductSelect(){
   if(inp&&!hid.value){inp.value='';hid.value='';}
 }
 var currentUnitPrice=0;
+var specRowCount=1;
+
+function addSpecRow(){
+  specRowCount++;
+  var row=document.createElement('div');
+  row.className='spec-row';
+  row.style.cssText='display:flex;gap:8px;margin-bottom:8px;align-items:center';
+  row.innerHTML='<input class="form-input" type="text" placeholder="規格（如：白色 US10）" style="flex:2">'
+    +'<input class="form-input" type="number" inputmode="numeric" min="1" value="1" placeholder="數量" style="flex:1" oninput="recalcOrderPrice()">'
+    +'<button type="button" onclick="removeSpecRow(this)" style="background:none;border:none;font-size:18px;color:var(--text3);cursor:pointer;flex-shrink:0;padding:0 4px">✕</button>';
+  document.getElementById('spec-rows').appendChild(row);
+}
+
+function removeSpecRow(btn){
+  btn.parentElement.remove();
+  recalcOrderPrice();
+}
+
+function getSpecRows(){
+  var rows=document.querySelectorAll('#spec-rows .spec-row');
+  var result=[];
+  rows.forEach(function(row){
+    var inputs=row.querySelectorAll('input');
+    var spec=inputs[0]?inputs[0].value.trim():'';
+    var qty=parseInt(inputs[1]?inputs[1].value:1)||1;
+    result.push({spec:spec,qty:qty});
+  });
+  return result;
+}
+
 function onProductSelect(){
   var id=document.getElementById('n-product').value;
   var p=products.find(x=>x.id===id);
@@ -806,9 +857,10 @@ function onProductSelect(){
 }
 function recalcOrderPrice(){
   if(!currentUnitPrice)return;
-  var qty=parseInt(document.getElementById('n-qty').value)||1;
-  document.getElementById('n-price').value=currentUnitPrice*qty;
-  document.getElementById('n-unit-price-hint').textContent='單價 NT$'+currentUnitPrice.toLocaleString()+' × '+qty;
+  var specs=getSpecRows();
+  var totalQty=specs.reduce(function(s,r){return s+r.qty;},0);
+  document.getElementById('n-price').value=currentUnitPrice*totalQty;
+  document.getElementById('n-unit-price-hint').textContent='單價 NT$'+currentUnitPrice.toLocaleString()+' × '+totalQty;
 }
 
 /* ── 商品管理 ── */
@@ -842,7 +894,13 @@ function openProductModal(id){
   document.getElementById('pm-brand').value='';
   document.getElementById('pm-note').value='';
   document.getElementById('pm-edit-id').value=id||'';
+  // 清除額外規格列
+  var rows=document.querySelectorAll('#pm-spec-rows .pm-spec-row');
+  for(var i=1;i<rows.length;i++)rows[i].remove();
+  // 編輯模式：隱藏「新增規格」按鈕，帶入資料
+  var addBtn=document.getElementById('pm-add-spec-btn');
   if(id){
+    addBtn.style.display='none';
     var p=products.find(x=>x.id===id);
     if(p){
       document.getElementById('pm-name').value=p.name||'';
@@ -851,28 +909,51 @@ function openProductModal(id){
       document.getElementById('pm-brand').value=p.brand||'';
       document.getElementById('pm-note').value=p.note||'';
     }
+  }else{
+    addBtn.style.display='inline';
   }
   document.getElementById('prod-modal').style.display='flex';
 }
 function editProduct(id){openProductModal(id);}
-function closeProdModal(){document.getElementById('prod-modal').style.display='none';}
+function closeProdModal(){
+  document.getElementById('prod-modal').style.display='none';
+  // 清除額外規格列
+  var rows=document.querySelectorAll('#pm-spec-rows .pm-spec-row');
+  for(var i=1;i<rows.length;i++)rows[i].remove();
+}
+function addProdSpecRow(){
+  var row=document.createElement('div');
+  row.className='pm-spec-row';
+  row.style.cssText='display:flex;gap:8px;margin-bottom:8px;align-items:center';
+  row.innerHTML='<input class="form-input" type="text" placeholder="規格（如：白色 US10）" style="flex:2">'
+    +'<input class="form-input" type="number" inputmode="numeric" placeholder="售價 NT$" style="flex:1">'
+    +'<button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;font-size:18px;color:var(--text3);cursor:pointer;flex-shrink:0;padding:0 4px">✕</button>';
+  document.getElementById('pm-spec-rows').appendChild(row);
+}
 function saveProduct(){
   var name=document.getElementById('pm-name').value.trim();
   if(!name){showToast('請輸入商品名稱');return;}
   var id=document.getElementById('pm-edit-id').value;
-  var data={
-    name:name,
-    spec:document.getElementById('pm-spec').value.trim(),
-    price:parseInt(document.getElementById('pm-price').value)||0,
-    brand:document.getElementById('pm-brand').value.trim(),
-    note:document.getElementById('pm-note').value.trim()
-  };
+  var brand=document.getElementById('pm-brand').value.trim();
+  var note=document.getElementById('pm-note').value.trim();
   if(id){
+    // 編輯：單筆更新
     var p=products.find(x=>x.id===id);
-    if(p)Object.assign(p,data);
+    if(p)Object.assign(p,{
+      name:name,
+      spec:document.getElementById('pm-spec').value.trim(),
+      price:parseInt(document.getElementById('pm-price').value)||0,
+      brand:brand,note:note
+    });
   }else{
-    data.id='P'+Date.now();
-    products.push(data);
+    // 新增：每列規格存成一筆
+    var pmRows=document.querySelectorAll('#pm-spec-rows .pm-spec-row');
+    pmRows.forEach(function(row){
+      var inputs=row.querySelectorAll('input');
+      var spec=inputs[0]?inputs[0].value.trim():'';
+      var price=parseInt(inputs[1]?inputs[1].value:0)||0;
+      products.push({id:'P'+Date.now()+Math.floor(Math.random()*1000),name:name,spec:spec,price:price,brand:brand,note:note});
+    });
   }
   closeProdModal();renderProducts();refreshProductSelect();saveData();
   showToast(id?'商品已更新':'商品已新增！');
@@ -1189,26 +1270,38 @@ function createOrder(){
   if(!name||!productId){showToast('請選擇訂購人和商品');return;}
   var prod=products.find(x=>x.id===productId);
   var productName=prod?prod.name:productId;
-  var id='ORD-'+(Date.now()%100000);
-  var total=parseInt(document.getElementById('n-price').value)||0;
   var today=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'/');
   var category=document.getElementById('n-category').value||'';
-  orders.unshift({id:id,name:name,product:productName,productId:productId,
-    qty:parseInt(document.getElementById('n-qty').value)||1,
-    spec:document.getElementById('n-spec').value,country:'',
-    price:'NT$'+total.toLocaleString(),status:'wait',
-    category:category,
-    note:document.getElementById('n-note').value,date:today});
-  saveData();showToast('訂單 '+id+' 已建立！');
+  var note=document.getElementById('n-note').value;
+  var unitPrice=currentUnitPrice||parseInt(document.getElementById('n-price').value)||0;
+  var specs=getSpecRows();
+  var created=[];
+  specs.forEach(function(row){
+    var id='ORD-'+(Date.now()%100000)+'-'+Math.floor(Math.random()*100);
+    var rowPrice=unitPrice?unitPrice*row.qty:Math.round((parseInt(document.getElementById('n-price').value)||0)/specs.reduce(function(s,r){return s+r.qty;},0))*row.qty;
+    orders.unshift({id:id,name:name,product:productName,productId:productId,
+      qty:row.qty,spec:row.spec,country:'',
+      price:'NT$'+rowPrice.toLocaleString(),status:'wait',
+      category:category,note:note,date:today});
+    created.push(id);
+  });
+  saveData();
+  showToast(created.length>1?'已建立 '+created.length+' 筆訂單！':'訂單 '+created[0]+' 已建立！');
+  // 清空
   document.getElementById('n-name').value='';
   document.getElementById('n-name-input').value='';
   document.getElementById('n-product').value='';
   document.getElementById('n-product-input').value='';
   document.getElementById('n-category').value='';
-  ['n-spec','n-price','n-note'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('n-spec').value='';
+  document.getElementById('n-price').value='';
+  document.getElementById('n-note').value='';
   document.getElementById('n-qty').value='1';
   document.getElementById('n-unit-price-hint').textContent='';
   currentUnitPrice=0;
+  // 移除額外規格列
+  var rows=document.querySelectorAll('#spec-rows .spec-row');
+  for(var i=1;i<rows.length;i++)rows[i].remove();
   setTimeout(()=>showTab('orders',document.querySelectorAll('.nav-btn')[0]),600);
 }
 function renderRecent(){
