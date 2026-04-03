@@ -435,18 +435,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
     <div class="modal-title"><span>訂單圖片預覽</span><button class="modal-close" onclick="closeModal()">關閉</button></div>
-    <div class="order-img-card" id="order-img-card">
-      <div class="oic-header"><div class="oic-shop">Hoshi Select</div><div class="oic-title" id="oic-product">—</div><div class="oic-id" id="oic-id">—</div></div>
-      <div class="oic-status-bar"><div class="oic-status-dot" id="oic-dot"></div><div class="oic-status-text" id="oic-status-text">—</div></div>
-      <div class="oic-body">
-        <div class="oic-row"><span class="oic-label">買家</span><span class="oic-val" id="oic-name">—</span></div>
-        <div class="oic-row"><span class="oic-label">數量</span><span class="oic-val" id="oic-qty">—</span></div>
-        <div class="oic-row" id="oic-spec-row"><span class="oic-label">規格</span><span class="oic-val" id="oic-spec">—</span></div>
-        <div class="oic-row"><span class="oic-label">來源</span><span class="oic-val" id="oic-country">—</span></div>
-        <div class="oic-row" id="oic-note-row"><span class="oic-label">備註</span><span class="oic-val" id="oic-note">—</span></div>
-        <div class="oic-row"><span class="oic-label">下單日期</span><span class="oic-val" id="oic-date">—</span></div>
-      </div>
-      <div class="oic-total-wrap"><div class="oic-total-label">應付金額</div><div class="oic-total-val" id="oic-price">—</div></div>
+    <div class="order-img-card" id="order-img-card" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.15);margin-bottom:16px">
+      <div class="oic-header"><div class="oic-shop">Hoshi Select</div><div class="oic-title" id="oic-name">—</div><div class="oic-id" id="oic-date">—</div></div>
+      <div id="oic-items-body" style="padding:0 22px"></div>
+      <div class="oic-total-wrap"><div class="oic-total-label">合計應付金額</div><div class="oic-total-val" id="oic-price">—</div></div>
       <div class="oic-footer"><div class="oic-footer-label" id="oic-footer-date">—</div><div class="oic-footer-brand">Hoshi Select · 業者版</div></div>
     </div>
     <div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:12px">長按下方圖片儲存到相簿</div>
@@ -1016,8 +1008,10 @@ function renderOrders(filter){
     // 客戶標題列
     html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
       +'<div style="font-size:16px;font-weight:700;color:var(--text)">'+name+'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px">'
       +'<div style="font-size:13px;font-weight:600;color:var(--text)">NT$'+totalAmt.toLocaleString()+'</div>'
-      +'</div>';
+      +'<button class="btn" style="flex:none;padding:5px 11px;font-size:11px" onclick="openCustomerOrderImg(\''+name.replace(/'/g,"\\'")+'\')" >生成圖片</button>'
+      +'</div></div>';
     // 每筆訂單
     lines.forEach(function(o,i){
       var s=statusMap[o.status];
@@ -1057,24 +1051,29 @@ function filterOrders(f,btn){
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');renderOrders(f);
 }
-function openOrderImg(id){
-  var o=orders.find(x=>x.id===id);if(!o)return;
-  var s=statusMap[o.status];
-  document.getElementById('oic-product').textContent=o.product;
-  document.getElementById('oic-id').textContent=o.id+' · '+o.date;
-  document.getElementById('oic-dot').style.background=s.color;
-  document.getElementById('oic-status-text').style.color=s.color;
-  document.getElementById('oic-status-text').textContent=s.label;
-  document.getElementById('oic-name').textContent=o.name;
-  document.getElementById('oic-qty').textContent=o.qty+' 件';
-  var sr=document.getElementById('oic-spec-row');
-  if(o.spec){document.getElementById('oic-spec').textContent=o.spec;sr.style.display='flex';}else sr.style.display='none';
-  document.getElementById('oic-country').textContent=o.country;
-  var nr=document.getElementById('oic-note-row');
-  if(o.note){document.getElementById('oic-note').textContent=o.note;nr.style.display='flex';}else nr.style.display='none';
-  document.getElementById('oic-date').textContent=o.date;
-  document.getElementById('oic-price').textContent=o.price;
+function openCustomerOrderImg(name){
+  var custOrders=orders.filter(o=>o.name===name);
+  if(!custOrders.length)return;
+  var totalAmt=custOrders.reduce(function(s,o){return s+(parseInt((o.price||'').replace(/[^0-9]/g,''))||0);},0);
+  document.getElementById('oic-name').textContent=name;
+  document.getElementById('oic-date').textContent=new Date().toLocaleDateString('zh-TW');
+  document.getElementById('oic-price').textContent='NT$'+totalAmt.toLocaleString();
   document.getElementById('oic-footer-date').textContent='生成時間 '+new Date().toLocaleDateString('zh-TW');
+  // 渲染商品列表
+  var body=document.getElementById('oic-items-body');
+  body.innerHTML=custOrders.map(function(o,i){
+    var s=statusMap[o.status];
+    var isLast=i===custOrders.length-1;
+    return '<div style="padding:12px 0;'+(isLast?'':'border-bottom:1px solid #f0f0f0')+'">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">'
+      +'<div style="font-size:14px;font-weight:600;color:#1a1a1a;flex:1;margin-right:8px">'+o.product+'</div>'
+      +'<span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap;background:'+(o.status==='wait'?'#FAEEDA':o.status==='proc'?'#E6F1FB':o.status==='ship'?'#EEEDFE':'#E1F5EE')+';color:'+(o.status==='wait'?'#854F0B':o.status==='proc'?'#185FA5':o.status==='ship'?'#534AB7':'#0F6E56')+'">'+s.label+'</span>'
+      +'</div>'
+      +'<div style="display:flex;justify-content:space-between;align-items:center">'
+      +'<span style="font-size:12px;color:#888">'+(o.spec||'無規格')+' · ×'+o.qty+' 件'+(o.note?' · '+o.note:'')+' · '+o.date+'</span>'
+      +'<span style="font-size:13px;font-weight:700;color:#1a1a1a">'+o.price+'</span>'
+      +'</div></div>';
+  }).join('');
   document.getElementById('order-img-rendered').style.display='none';
   document.getElementById('img-modal').style.display='flex';
 }
@@ -1145,6 +1144,20 @@ function doDelete(){
   if(pendingDeleteId){
     orders=orders.filter(o=>o.id!==pendingDeleteId);
     closeDelModal();renderOrders(currentFilter);renderRecent();saveData();showToast('訂單已刪除');
+  }else if(pendingDeleteCustId){
+    customers=customers.filter(x=>x.id!==pendingDeleteCustId);
+    closeDelModal();renderCustomers();refreshCustomerSelect();saveData();showToast('客戶已刪除');
+  }else if(pendingDeleteProdId){
+    products=products.filter(x=>x.id!==pendingDeleteProdId);
+    closeDelModal();renderProducts();refreshProductSelect();saveData();showToast('商品已刪除');
+  }
+}
+renderRecent();calc();refreshCustomerSelect();refreshProductSelect();
+document.getElementById('home-date').textContent=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+</script>
+</body>
+</html>
+);
   }else if(pendingDeleteCustId){
     customers=customers.filter(x=>x.id!==pendingDeleteCustId);
     closeDelModal();renderCustomers();refreshCustomerSelect();saveData();showToast('客戶已刪除');
