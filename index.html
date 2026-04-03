@@ -353,7 +353,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
       <div class="sec-head"><span class="sec-title">費用計算器</span></div>
       <div style="margin-bottom:13px">
         <div style="font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:500">商品名稱</div>
-        <input class="calc-input-full" id="c-name" type="text" placeholder="輸入商品名稱（匯入商品時顯示）">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="calc-input-full" id="c-name" type="text" placeholder="輸入商品名稱" style="margin:0;flex:1">
+          <div style="position:relative;flex-shrink:0">
+            <button class="btn" style="padding:10px 12px;font-size:12px;white-space:nowrap" onclick="toggleCalcProductPicker()">從商品選取</button>
+            <div id="calc-product-dropdown" style="display:none;position:absolute;top:100%;right:0;min-width:200px;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius-sm);z-index:20;max-height:220px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.12);margin-top:4px"></div>
+          </div>
+        </div>
       </div>
 
       <!-- 第一區：換算 -->
@@ -1181,6 +1187,39 @@ function selectPlan(plan){
     aCheck.style.background='var(--bg)';aCheck.style.borderColor='var(--border2)';
   }
   calc();
+}
+function toggleCalcProductPicker(){
+  var dd=document.getElementById('calc-product-dropdown');
+  if(dd.style.display==='none'){
+    dd.innerHTML='';
+    if(!products.length){
+      dd.innerHTML='<div style="padding:12px;font-size:13px;color:var(--text3);text-align:center">尚無商品</div>';
+    }else{
+      var q=document.getElementById('c-name').value.toLowerCase();
+      var filtered=q?products.filter(p=>p.name.toLowerCase().includes(q)):products;
+      filtered.forEach(function(p){
+        var div=document.createElement('div');
+        div.style.cssText='padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:0.5px solid var(--border);color:var(--text)';
+        div.textContent=p.name+(p.brand?' · '+p.brand:'');
+        div.addEventListener('mousedown',function(e){
+          e.preventDefault();
+          document.getElementById('c-name').value=p.name;
+          dd.style.display='none';
+        });
+        dd.appendChild(div);
+      });
+    }
+    dd.style.display='block';
+    // 點外面關閉
+    setTimeout(function(){
+      document.addEventListener('click',function closeDD(e){
+        if(!dd.contains(e.target)){dd.style.display='none';}
+        document.removeEventListener('click',closeDD);
+      });
+    },10);
+  }else{
+    dd.style.display='none';
+  }
 }
 function switchCur(cur){
   currentCur=cur;var c=rates[cur];
