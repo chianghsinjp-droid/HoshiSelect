@@ -288,8 +288,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
           <button type="button" onclick="addSpecRow()" style="background:none;border:none;font-size:12px;color:var(--blue);cursor:pointer;padding:0;font-weight:500">＋ 新增規格</button>
         </label>
         <div id="spec-rows">
-          <!-- 第一列固定 -->
           <div class="spec-row" style="display:flex;gap:8px;margin-bottom:8px">
+            <select class="form-select" id="n-spec-sel" onchange="onSpecSelect()" style="flex:2;display:none"></select>
             <input class="form-input" id="n-spec" type="text" placeholder="規格（如：黑色 US9）" style="flex:2">
             <input class="form-input" id="n-qty" type="number" inputmode="numeric" min="1" value="1" placeholder="數量" style="flex:1" oninput="recalcOrderPrice()">
           </div>
@@ -540,7 +540,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
     <div class="modal-title"><span id="prod-modal-title">新增商品</span><button class="modal-close" onclick="closeProdModal()">關閉</button></div>
     <div class="form-group"><label class="form-label">商品名稱</label><input class="form-input" id="pm-name" type="text" placeholder="如：Nike Air Max 95"></div>
     <div class="form-group"><label class="form-label">品牌（選填）</label><input class="form-input" id="pm-brand" type="text" placeholder="如：Nike、Loewe"></div>
-    <!-- 規格列（新增模式可多筆，編輯模式只顯示一筆）-->
     <div class="form-group">
       <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
         <span>規格 / 售價</span>
@@ -818,6 +817,23 @@ function filterDropdown(field,inputId,list,labelKey,valueKey){
   _renderDropdown(field,list,labelKey,valueKey,q);
   document.getElementById(field+'-dropdown').style.display='block';
 }
+function escQ(s){return String(s).replace(/'/g,"\\'");}
+function selectDropdownItem(field,value,label){
+  document.getElementById(field).value=value;
+  document.getElementById(field+'-input').value=label;
+  hideDropdown(field);
+  if(field==='n-product')onProductSelect();
+}
+function refreshCustomerSelect(){
+  var inp=document.getElementById('n-name-input');
+  var hid=document.getElementById('n-name');
+  if(inp&&!hid.value){inp.value='';hid.value='';}
+}
+function refreshProductSelect(){
+  var inp=document.getElementById('n-product-input');
+  var hid=document.getElementById('n-product');
+  if(inp&&!hid.value){inp.value='';hid.value='';}
+}
 function _renderDropdown(field,list,labelKey,valueKey,q){
   var dd=document.getElementById(field+'-dropdown');
   var isProduct=field==='n-product';
@@ -828,7 +844,10 @@ function _renderDropdown(field,list,labelKey,valueKey,q){
   }
   dd.innerHTML='';
   filtered.forEach(function(i){
-    var label=isProduct?(i.name+(i.spec?' · '+i.spec:'')+(i.price?' — NT$'+Number(i.price).toLocaleString():'')):i[labelKey];
+    var variants=isProduct?(i.variants||[{spec:i.spec||'',price:i.price||0}]):null;
+    var label=isProduct
+      ?i.name+(variants&&variants.length>1?' ('+variants.length+' 規格)':variants&&variants[0].spec?' · '+variants[0].spec:'')
+      :i[labelKey];
     var displayName=i.name;
     var div=document.createElement('div');
     div.style.cssText='padding:11px 14px;font-size:14px;cursor:pointer;border-bottom:0.5px solid var(--border);color:var(--text)';
@@ -840,24 +859,6 @@ function _renderDropdown(field,list,labelKey,valueKey,q){
     div.addEventListener('touchstart',function(e){e.preventDefault();selectDropdownItem(this.dataset.field,this.dataset.value,this.dataset.label);},{passive:false});
     dd.appendChild(div);
   });
-}
-function escQ(s){return String(s).replace(/'/g,"\\'");}
-function selectDropdownItem(field,value,label){
-  document.getElementById(field).value=value;
-  document.getElementById(field+'-input').value=label;
-  hideDropdown(field);
-  if(field==='n-product')onProductSelect();
-}
-function refreshCustomerSelect(){
-  // 清空舊值（搜尋模式不需要預填 option，只確保隱藏值清空）
-  var inp=document.getElementById('n-name-input');
-  var hid=document.getElementById('n-name');
-  if(inp&&!hid.value){inp.value='';hid.value='';}
-}
-function refreshProductSelect(){
-  var inp=document.getElementById('n-product-input');
-  var hid=document.getElementById('n-product');
-  if(inp&&!hid.value){inp.value='';hid.value='';}
 }
 var currentUnitPrice=0;
 var specRowCount=1;
@@ -881,10 +882,18 @@ function removeSpecRow(btn){
 function getSpecRows(){
   var rows=document.querySelectorAll('#spec-rows .spec-row');
   var result=[];
-  rows.forEach(function(row){
-    var inputs=row.querySelectorAll('input');
-    var spec=inputs[0]?inputs[0].value.trim():'';
-    var qty=parseInt(inputs[1]?inputs[1].value:1)||1;
+  rows.forEach(function(row,idx){
+    var specSel=row.querySelector('select');
+    var specInp=row.querySelector('input[type="text"],input:not([type])');
+    var qtyInp=row.querySelector('input[type="number"]');
+    var spec='';
+    if(idx===0){
+      // 第一列：規格可能是下拉或輸入框
+      spec=document.getElementById('n-spec').value.trim();
+    }else{
+      spec=specInp?specInp.value.trim():'';
+    }
+    var qty=parseInt(qtyInp?qtyInp.value:1)||1;
     result.push({spec:spec,qty:qty});
   });
   return result;
@@ -893,16 +902,43 @@ function getSpecRows(){
 function onProductSelect(){
   var id=document.getElementById('n-product').value;
   var p=products.find(x=>x.id===id);
+  var specSel=document.getElementById('n-spec-sel');
+  var specInput=document.getElementById('n-spec');
   if(p){
-    document.getElementById('n-spec').value=p.spec||'';
-    currentUnitPrice=parseInt(p.price)||0;
+    var variants=p.variants||[{spec:p.spec||'',price:p.price||0}];
+    if(variants.length>1){
+      specSel.innerHTML=variants.map(function(v,i){
+        return '<option value="'+i+'">'+(v.spec||'（無規格）')+(v.price?' — NT$'+Number(v.price).toLocaleString():'')+'</option>';
+      }).join('');
+      specSel.style.display='';
+      specInput.style.display='none';
+      specInput.value=variants[0].spec||'';
+      currentUnitPrice=variants[0].price||0;
+    }else{
+      specSel.style.display='none';
+      specInput.style.display='';
+      specInput.value=variants[0].spec||'';
+      currentUnitPrice=variants[0].price||0;
+    }
     recalcOrderPrice();
   }else{
-    document.getElementById('n-spec').value='';
+    specSel.style.display='none';
+    specInput.style.display='';
+    specInput.value='';
     document.getElementById('n-price').value='';
     currentUnitPrice=0;
     document.getElementById('n-unit-price-hint').textContent='';
   }
+}
+function onSpecSelect(){
+  var id=document.getElementById('n-product').value;
+  var p=products.find(x=>x.id===id);if(!p)return;
+  var variants=p.variants||[{spec:p.spec||'',price:p.price||0}];
+  var idx=parseInt(document.getElementById('n-spec-sel').value)||0;
+  var v=variants[idx]||variants[0];
+  document.getElementById('n-spec').value=v.spec||'';
+  currentUnitPrice=v.price||0;
+  recalcOrderPrice();
 }
 function recalcOrderPrice(){
   if(!currentUnitPrice)return;
@@ -1015,15 +1051,16 @@ function renderProducts(){
   if(!products.length){el.innerHTML='<div class="empty">尚無商品，點右上角新增</div>';return;}
   el.innerHTML=products.map(function(p){
     var orderCount=orders.filter(o=>o.productId===p.id).length;
+    var variants=p.variants||[{spec:p.spec||'',price:p.price||0}];
+    var variantHtml=variants.map(function(v){
+      return '<span class="prod-tag">'+(v.spec||'無規格')+(v.price?' NT$'+Number(v.price).toLocaleString():'')+'</span>';
+    }).join('');
     return '<div class="prod-card">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">'
       +'<div><div class="prod-name">'+p.name+'</div>'
-      +(p.brand?'<div class="prod-brand">'+p.brand+'</div>':'')+' </div>'
-      +'<div class="prod-price">NT$'+(p.price?Number(p.price).toLocaleString():'—')+'</div></div>'
-      +'<div class="prod-meta">'
-      +(p.spec?'<span class="prod-tag">'+p.spec+'</span>':'')
-      +'<span class="prod-tag">已建立 '+orderCount+' 筆訂單</span>'
-      +'</div>'
+      +(p.brand?'<div class="prod-brand">'+p.brand+'</div>':'')+'</div>'
+      +'<span class="prod-tag">'+orderCount+' 筆訂單</span></div>'
+      +'<div class="prod-meta" style="flex-wrap:wrap">'+variantHtml+'</div>'
       +(p.note?'<div class="prod-note">'+p.note+'</div>':'')
       +'<div class="cust-actions">'
       +'<button class="btn" onclick="editProduct(\''+p.id+'\')">編輯</button>'
@@ -1040,21 +1077,31 @@ function openProductModal(id){
   document.getElementById('pm-brand').value='';
   document.getElementById('pm-note').value='';
   document.getElementById('pm-edit-id').value=id||'';
-  // 清除額外規格列
   var rows=document.querySelectorAll('#pm-spec-rows .pm-spec-row');
   for(var i=1;i<rows.length;i++)rows[i].remove();
-  // 編輯模式：隱藏「新增規格」按鈕，帶入資料
   var addBtn=document.getElementById('pm-add-spec-btn');
   if(id){
-    addBtn.style.display='none';
     var p=products.find(x=>x.id===id);
     if(p){
       document.getElementById('pm-name').value=p.name||'';
-      document.getElementById('pm-spec').value=p.spec||'';
-      document.getElementById('pm-price').value=p.price||'';
       document.getElementById('pm-brand').value=p.brand||'';
       document.getElementById('pm-note').value=p.note||'';
+      var variants=p.variants||[{spec:p.spec||'',price:p.price||0}];
+      // 填入第一列
+      document.getElementById('pm-spec').value=variants[0].spec||'';
+      document.getElementById('pm-price').value=variants[0].price||'';
+      // 額外規格列
+      for(var vi=1;vi<variants.length;vi++){
+        var row=document.createElement('div');
+        row.className='pm-spec-row';
+        row.style.cssText='display:flex;gap:8px;margin-bottom:8px;align-items:center';
+        row.innerHTML='<input class="form-input" type="text" placeholder="規格" style="flex:2" value="'+variants[vi].spec+'">'
+          +'<input class="form-input" type="number" inputmode="numeric" placeholder="售價 NT$" style="flex:1" value="'+variants[vi].price+'">'
+          +'<button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;font-size:18px;color:var(--text3);cursor:pointer;flex-shrink:0;padding:0 4px">✕</button>';
+        document.getElementById('pm-spec-rows').appendChild(row);
+      }
     }
+    addBtn.style.display='inline';
   }else{
     addBtn.style.display='inline';
   }
@@ -1063,7 +1110,6 @@ function openProductModal(id){
 function editProduct(id){openProductModal(id);}
 function closeProdModal(){
   document.getElementById('prod-modal').style.display='none';
-  // 清除額外規格列
   var rows=document.querySelectorAll('#pm-spec-rows .pm-spec-row');
   for(var i=1;i<rows.length;i++)rows[i].remove();
 }
@@ -1082,24 +1128,21 @@ function saveProduct(){
   var id=document.getElementById('pm-edit-id').value;
   var brand=document.getElementById('pm-brand').value.trim();
   var note=document.getElementById('pm-note').value.trim();
+  // 收集所有規格列
+  var pmRows=document.querySelectorAll('#pm-spec-rows .pm-spec-row');
+  var variants=[];
+  pmRows.forEach(function(row){
+    var inputs=row.querySelectorAll('input');
+    var spec=(inputs[0]?inputs[0].value.trim():'');
+    var price=parseInt(inputs[1]?inputs[1].value:0)||0;
+    variants.push({spec:spec,price:price});
+  });
+  if(!variants.length){showToast('請至少填一個規格');return;}
   if(id){
-    // 編輯：單筆更新
     var p=products.find(x=>x.id===id);
-    if(p)Object.assign(p,{
-      name:name,
-      spec:document.getElementById('pm-spec').value.trim(),
-      price:parseInt(document.getElementById('pm-price').value)||0,
-      brand:brand,note:note
-    });
+    if(p)Object.assign(p,{name:name,brand:brand,note:note,variants:variants,spec:variants[0].spec,price:variants[0].price});
   }else{
-    // 新增：每列規格存成一筆
-    var pmRows=document.querySelectorAll('#pm-spec-rows .pm-spec-row');
-    pmRows.forEach(function(row){
-      var inputs=row.querySelectorAll('input');
-      var spec=inputs[0]?inputs[0].value.trim():'';
-      var price=parseInt(inputs[1]?inputs[1].value:0)||0;
-      products.push({id:'P'+Date.now()+Math.floor(Math.random()*1000),name:name,spec:spec,price:price,brand:brand,note:note});
-    });
+    products.push({id:'P'+Date.now(),name:name,brand:brand,note:note,variants:variants,spec:variants[0].spec,price:variants[0].price});
   }
   closeProdModal();renderProducts();refreshProductSelect();saveData();
   showToast(id?'商品已更新':'商品已新增！');
@@ -1113,10 +1156,8 @@ function deleteProduct(id){
 function useProduct(id){
   var p=products.find(x=>x.id===id);if(!p)return;
   document.getElementById('n-product').value=id;
-  document.getElementById('n-product-input').value=p.name+(p.spec?' · '+p.spec:'');
-  document.getElementById('n-spec').value=p.spec||'';
-  currentUnitPrice=parseInt(p.price)||0;
-  recalcOrderPrice();
+  document.getElementById('n-product-input').value=p.name;
+  onProductSelect();
   showTab('new',null);
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   showToast('已帶入：'+p.name);
@@ -1314,20 +1355,35 @@ function renderOrders(filter){
   var filtered=filter==='all'?orders:orders.filter(o=>o.status===filter);
   document.getElementById('order-count').textContent='共 '+filtered.length+' 筆';
   if(!filtered.length){document.getElementById('order-list').innerHTML='<div class="empty">此分類沒有訂單</div>';return;}
-  // 依客戶分組
+  // 依「客戶 + 分類」分組，key = 姓名___分類
   var map={};
-  filtered.forEach(o=>{if(!map[o.name])map[o.name]=[];map[o.name].push(o);});
+  var keyOrder=[];
+  filtered.forEach(function(o){
+    var cat=o.category||'（無分類）';
+    var key=o.name+'___'+cat;
+    if(!map[key]){map[key]={name:o.name,category:cat,lines:[]};keyOrder.push(key);}
+    map[key].lines.push(o);
+  });
+  // 去除重複 key（forEach 保序）
+  var seen={};
+  keyOrder=keyOrder.filter(function(k){return seen[k]?false:(seen[k]=true);});
   var html='';
-  Object.keys(map).forEach(function(name){
-    var lines=map[name];
+  keyOrder.forEach(function(key){
+    var g=map[key];
+    var lines=g.lines;
     var totalAmt=lines.reduce(function(s,o){return s+(parseInt((o.price||'').replace(/[^0-9]/g,''))||0);},0);
+    var safeName=g.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    var safeKey=key.replace(/'/g,"\\'");
     html+='<div class="card" style="margin-bottom:12px">';
-    var safeName=name.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    // 標題列：姓名 + 分類標籤 + 金額 + 圖片按鈕
     html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
-      +'<div style="font-size:16px;font-weight:700;color:var(--text)">'+name+'</div>'
+      +'<div>'
+      +'<div style="font-size:16px;font-weight:700;color:var(--text)">'+g.name+'</div>'
+      +(g.category!=='（無分類）'?'<div style="font-size:11px;color:var(--text2);margin-top:2px">'+g.category+'</div>':'')
+      +'</div>'
       +'<div style="display:flex;align-items:center;gap:8px">'
       +'<div style="font-size:13px;font-weight:600;color:var(--text)">NT$'+totalAmt.toLocaleString()+'</div>'
-      +'<button class="btn" style="flex:none;padding:5px 11px;font-size:11px" data-custname="'+safeName+'" onclick="openCustomerOrderImg(this.dataset.custname)">📄 圖片</button>'
+      +'<button class="btn" style="flex:none;padding:5px 11px;font-size:11px" data-key="'+safeKey+'" onclick="openGroupOrderImg(this.dataset.key)">📄 圖片</button>'
       +'</div></div>';
     // 每筆訂單
     lines.forEach(function(o,i){
@@ -1338,9 +1394,8 @@ function renderOrders(filter){
         +'<div><div style="font-size:14px;font-weight:600;color:var(--text)">'+o.product+'</div>'
         +(o.spec?'<div style="font-size:12px;color:var(--text2);margin-top:1px">'+o.spec+'</div>':'')
         +'</div>'
-        +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
         +'<span class="badge '+s.cls+'">'+s.label+'</span>'
-        +'</div></div>'
+        +'</div>'
         +'<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:8px">'
         +'<span>×'+o.qty+' 件 · '+o.id+'</span>'
         +'<span style="font-weight:600;color:var(--text)">'+o.price+'</span>'
@@ -1368,19 +1423,24 @@ function filterOrders(f,btn){
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');renderOrders(f);
 }
-function openCustomerOrderImg(name){
-  var custOrders=orders.filter(o=>o.name===name);
-  if(!custOrders.length)return;
-  var totalAmt=custOrders.reduce(function(s,o){return s+(parseInt((o.price||'').replace(/[^0-9]/g,''))||0);},0);
+function openGroupOrderImg(key){
+  var parts=key.split('___');
+  var name=parts[0];
+  var cat=parts[1]||'';
+  var groupOrders=orders.filter(function(o){
+    var oCat=o.category||'（無分類）';
+    return o.name===name&&oCat===cat;
+  });
+  if(!groupOrders.length)return;
+  var totalAmt=groupOrders.reduce(function(s,o){return s+(parseInt((o.price||'').replace(/[^0-9]/g,''))||0);},0);
   document.getElementById('oic-name').textContent=name;
-  var cats=[...new Set(custOrders.map(o=>o.category).filter(Boolean))];
-  document.getElementById('oic-category').textContent=cats.length?cats.join(' · '):'Hoshi Select';
+  document.getElementById('oic-category').textContent=cat!=='（無分類）'?cat:'Hoshi Select';
   document.getElementById('oic-price').textContent='NT$'+totalAmt.toLocaleString();
   document.getElementById('oic-footer-date').textContent='生成時間 '+new Date().toLocaleDateString('zh-TW');
   var body=document.getElementById('oic-items-body');
-  body.innerHTML=custOrders.map(function(o,i){
+  body.innerHTML=groupOrders.map(function(o,i){
     var s=statusMap[o.status];
-    var isLast=i===custOrders.length-1;
+    var isLast=i===groupOrders.length-1;
     var statusBg=o.status==='wait'?'#FAEEDA':o.status==='proc'?'#E6F1FB':o.status==='ship'?'#EEEDFE':'#E1F5EE';
     var statusColor=o.status==='wait'?'#854F0B':o.status==='proc'?'#185FA5':o.status==='ship'?'#534AB7':'#0F6E56';
     return '<div style="padding:12px 0;'+(isLast?'':'border-bottom:1px solid #f0f0f0')+'">'
@@ -1440,6 +1500,8 @@ function createOrder(){
   document.getElementById('n-product-input').value='';
   document.getElementById('n-category').value='';
   document.getElementById('n-spec').value='';
+  document.getElementById('n-spec-sel').style.display='none';
+  document.getElementById('n-spec-sel').innerHTML='';
   document.getElementById('n-price').value='';
   document.getElementById('n-note').value='';
   document.getElementById('n-qty').value='1';
