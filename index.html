@@ -217,21 +217,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
     <div class="topbar-title">📦 Hoshi Select</div>
   </div>
   <div class="nav">
-    <button class="nav-btn active" onclick="showTab('home',this)"><span class="nav-icon">✏️</span>新增</button>
+    <button class="nav-btn active" onclick="showTab('orders',this)"><span class="nav-icon">📋</span>訂單</button>
     <button class="nav-btn" onclick="showTab('calc',this)"><span class="nav-icon">🧮</span>計算</button>
     <button class="nav-btn" onclick="showTab('products',this)"><span class="nav-icon">🏷️</span>商品</button>
     <button class="nav-btn" onclick="showTab('buylist',this)"><span class="nav-icon">🛒</span>採買</button>
-    <button class="nav-btn" onclick="showTab('orders',this)"><span class="nav-icon">📋</span>訂單</button>
     <button class="nav-btn" onclick="showTab('customers',this)"><span class="nav-icon">👥</span>客戶</button>
     <button class="nav-btn" onclick="showTab('profit',this)"><span class="nav-icon">💰</span>利潤</button>
   </div>
   <div class="content">
-    <!-- 快速新增訂單 -->
-    <div id="tab-home" class="section visible">
-      <div class="sec-head" style="margin-bottom:18px">
-        <span class="sec-title">新增訂單</span>
-        <div style="font-size:12px;color:var(--text3)" id="home-date"></div>
+    <!-- 訂單 -->
+    <div id="tab-orders" class="section visible">
+      <div class="sec-head"><span class="sec-title">所有訂單</span><div style="display:flex;align-items:center;gap:10px"><span style="font-size:13px;color:var(--text2)" id="order-count"></span><button class="btn" style="flex:none;padding:7px 14px;font-size:12px;background:var(--text);color:var(--bg);border-color:transparent" onclick="showTab('new',null);document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'))">＋ 新增</button></div></div>
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterOrders('all',this)">全部</button>
+        <button class="filter-btn" onclick="filterOrders('wait',this)">待採購</button>
+        <button class="filter-btn" onclick="filterOrders('proc',this)">待確認</button>
+        <button class="filter-btn" onclick="filterOrders('ship',this)">待付款</button>
+        <button class="filter-btn" onclick="filterOrders('done',this)">已完成</button>
       </div>
+      <div id="order-list"></div>
+    </div>
+    <!-- 新增訂單 (hidden) -->
+    <div id="tab-new" class="section">
+      <div class="sec-head"><span class="sec-title">建立新訂單</span></div>
       <!-- 訂購人 -->
       <div class="form-group">
         <label class="form-label">訂購人</label>
@@ -264,10 +272,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
         </div>
       </div>
       <div class="two-col">
-        <div class="form-group"><label class="form-label">數量</label><input class="form-input" id="n-qty" type="number" inputmode="numeric" min="1" value="1"></div>
+        <div class="form-group"><label class="form-label">數量</label><input class="form-input" id="n-qty" type="number" inputmode="numeric" min="1" value="1" oninput="recalcOrderPrice()"></div>
         <div class="form-group"><label class="form-label">規格</label><input class="form-input" id="n-spec" type="text" placeholder="如：US10 黑"></div>
       </div>
-      <div class="form-group"><label class="form-label">價格（NT$）</label><input class="form-input" id="n-price" type="number" inputmode="numeric" placeholder="0"></div>
+      <div class="form-group">
+        <label class="form-label" style="display:flex;justify-content:space-between">
+          <span>價格（NT$）</span>
+          <span id="n-unit-price-hint" style="color:var(--text3);font-weight:400"></span>
+        </label>
+        <input class="form-input" id="n-price" type="number" inputmode="numeric" placeholder="0">
+      </div>
       <div class="form-group"><label class="form-label">備註</label><input class="form-input" id="n-note" type="text" placeholder="顏色、連結、特殊需求…"></div>
       <button class="btn primary" style="width:100%;padding:15px;font-size:15px" onclick="createOrder()">建立訂單</button>
     </div>
@@ -591,12 +605,12 @@ function showTab(t,btn){
   document.getElementById('tab-'+t).classList.add('visible');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
-  if(t==='orders'){renderOrders(currentFilter);}
+  if(t==='orders')renderOrders(currentFilter);
   if(t==='buylist')renderBuylist();
   if(t==='profit')recalcProfit();
   if(t==='customers')renderCustomers();
   if(t==='products')renderProducts();
-  if(t==='home'){refreshCustomerSelect();refreshProductSelect();refreshCategorySelect();}
+  if(t==='new'){refreshCustomerSelect();refreshProductSelect();refreshCategorySelect();}
   window.scrollTo(0,0);
 }
 
@@ -775,16 +789,26 @@ function refreshProductSelect(){
   var hid=document.getElementById('n-product');
   if(inp&&!hid.value){inp.value='';hid.value='';}
 }
+var currentUnitPrice=0;
 function onProductSelect(){
   var id=document.getElementById('n-product').value;
   var p=products.find(x=>x.id===id);
   if(p){
     document.getElementById('n-spec').value=p.spec||'';
-    document.getElementById('n-price').value=p.price||'';
+    currentUnitPrice=parseInt(p.price)||0;
+    recalcOrderPrice();
   }else{
     document.getElementById('n-spec').value='';
     document.getElementById('n-price').value='';
+    currentUnitPrice=0;
+    document.getElementById('n-unit-price-hint').textContent='';
   }
+}
+function recalcOrderPrice(){
+  if(!currentUnitPrice)return;
+  var qty=parseInt(document.getElementById('n-qty').value)||1;
+  document.getElementById('n-price').value=currentUnitPrice*qty;
+  document.getElementById('n-unit-price-hint').textContent='單價 NT$'+currentUnitPrice.toLocaleString()+' × '+qty;
 }
 
 /* ── 商品管理 ── */
@@ -864,8 +888,10 @@ function useProduct(id){
   document.getElementById('n-product').value=id;
   document.getElementById('n-product-input').value=p.name+(p.spec?' · '+p.spec:'');
   document.getElementById('n-spec').value=p.spec||'';
-  document.getElementById('n-price').value=p.price||'';
-  showTab('home',document.querySelectorAll('.nav-btn')[0]);
+  currentUnitPrice=parseInt(p.price)||0;
+  recalcOrderPrice();
+  showTab('new',null);
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   showToast('已帶入：'+p.name);
 }
 var selectedPlan='a';
@@ -1181,7 +1207,9 @@ function createOrder(){
   document.getElementById('n-category').value='';
   ['n-spec','n-price','n-note'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('n-qty').value='1';
-  setTimeout(()=>showTab('orders',document.querySelectorAll('.nav-btn')[4]),600);
+  document.getElementById('n-unit-price-hint').textContent='';
+  currentUnitPrice=0;
+  setTimeout(()=>showTab('orders',document.querySelectorAll('.nav-btn')[0]),600);
 }
 function renderRecent(){
   document.getElementById('recent-list').innerHTML=orders.slice(0,3).map(o=>{
@@ -1285,8 +1313,7 @@ function doDelete(){
     closeDelModal();renderProducts();refreshProductSelect();saveData();showToast('商品已刪除');
   }
 }
-calc();refreshCustomerSelect();refreshProductSelect();refreshCategorySelect();
-document.getElementById('home-date').textContent=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+calc();refreshCustomerSelect();refreshProductSelect();refreshCategorySelect();renderOrders('all');
 </script>
 </body>
 </html>
