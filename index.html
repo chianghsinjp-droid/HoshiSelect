@@ -72,6 +72,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
 .form-label{font-size:12px;color:var(--text2);margin-bottom:5px;display:block;font-weight:500}
 .form-input,.form-select{width:100%;padding:11px 13px;border:0.5px solid var(--border2);border-radius:var(--radius-sm);font-size:14px;background:var(--bg);color:var(--text);-webkit-appearance:none;appearance:none}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* 許願清單 */
+.wish-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.wish-img{width:100%;height:180px;object-fit:cover;display:block}
+.wish-img-placeholder{width:100%;height:120px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--text3)}
+.wish-body{padding:13px 15px}
+.wish-name{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px}
+.wish-note{font-size:12px;color:var(--text2);margin-bottom:4px;line-height:1.5}
+.wish-url{font-size:12px;color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:10px;display:block}
+.wish-actions{display:flex;gap:8px}
 /* 採買清單 */
 .buy-group{border:0.5px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
 .buy-group-header{padding:12px 14px;background:var(--bg2);display:flex;align-items:center;justify-content:space-between}
@@ -220,6 +229,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
     <button class="nav-btn active" onclick="showTab('orders',this)"><span class="nav-icon">📋</span>訂單</button>
     <button class="nav-btn" onclick="showTab('calc',this)"><span class="nav-icon">🧮</span>計算</button>
     <button class="nav-btn" onclick="showTab('products',this)"><span class="nav-icon">🏷️</span>商品</button>
+    <button class="nav-btn" onclick="showTab('wishlist',this)"><span class="nav-icon">⭐</span>許願</button>
     <button class="nav-btn" onclick="showTab('buylist',this)"><span class="nav-icon">🛒</span>採買</button>
     <button class="nav-btn" onclick="showTab('customers',this)"><span class="nav-icon">👥</span>客戶</button>
     <button class="nav-btn" onclick="showTab('profit',this)"><span class="nav-icon">💰</span>利潤</button>
@@ -306,6 +316,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
         <button class="filter-btn" onclick="filterOrders('done',this)">已完成</button>
       </div>
       <div id="order-list"></div>
+    </div>
+    <!-- 許願清單 -->
+    <div id="tab-wishlist" class="section">
+      <div class="sec-head">
+        <span class="sec-title">許願清單</span>
+        <button class="btn" style="flex:none;padding:7px 14px;font-size:12px;background:var(--text);color:var(--bg);border-color:transparent" onclick="openWishModal()">＋ 新增</button>
+      </div>
+      <div id="wish-list"><div class="empty">尚無許願商品，點右上角新增</div></div>
     </div>
     <!-- 採買清單 -->
     <div id="tab-buylist" class="section">
@@ -475,6 +493,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
 </div>
 <div class="toast" id="toast"></div>
 
+<!-- 許願清單 新增/編輯 Modal -->
+<div class="cust-modal-overlay" id="wish-modal" style="display:none" onclick="if(event.target===this)closeWishModal()">
+  <div class="cust-modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title"><span id="wish-modal-title">新增許願商品</span><button class="modal-close" onclick="closeWishModal()">關閉</button></div>
+    <!-- 圖片上傳 -->
+    <div class="form-group">
+      <label class="form-label">商品圖片</label>
+      <div id="wish-upload-area" onclick="document.getElementById('wish-img-input').click()" style="border:2px dashed var(--border2);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;background:var(--bg2);margin-bottom:8px">
+        <input type="file" id="wish-img-input" accept="image/*" style="display:none" onchange="onWishImageSelected(event)">
+        <div style="font-size:28px;margin-bottom:6px">🖼️</div>
+        <div style="font-size:13px;color:var(--text2)">點此選取圖片</div>
+      </div>
+      <div id="wish-img-preview-wrap" style="display:none;position:relative;margin-bottom:8px">
+        <img id="wish-img-preview" style="width:100%;border-radius:var(--radius-sm);max-height:200px;object-fit:cover;display:block" alt="">
+        <button onclick="clearWishImage()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.5);border:none;color:#fff;border-radius:20px;padding:4px 10px;font-size:12px;cursor:pointer">✕ 移除</button>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">商品名稱</label><input class="form-input" id="wm-name" type="text" placeholder="如：Nike Air Max 95 黑色"></div>
+    <div class="form-group"><label class="form-label">備註（選填）</label><input class="form-input" id="wm-note" type="text" placeholder="尺寸、顏色、預算…"></div>
+    <div class="form-group"><label class="form-label">商品連結（選填）</label><input class="form-input" id="wm-url" type="url" placeholder="https://..."></div>
+    <input type="hidden" id="wm-edit-id">
+    <input type="hidden" id="wm-img-data">
+    <button class="btn primary" style="width:100%;padding:14px;font-size:14px;margin-top:4px" onclick="saveWish()">儲存</button>
+  </div>
+</div>
+
 <!-- 分類管理 Modal -->
 <div class="cust-modal-overlay" id="cat-modal" style="display:none" onclick="if(event.target===this)closeCategoryModal()">
   <div class="cust-modal-sheet">
@@ -599,9 +644,10 @@ function saveData(){
     localStorage.setItem('hoshi_customers',JSON.stringify(customers));
     localStorage.setItem('hoshi_products',JSON.stringify(products));
     localStorage.setItem('hoshi_categories',JSON.stringify(categories));
+    localStorage.setItem('hoshi_wishlist',JSON.stringify(wishlist));
   }catch(e){}
 }
-var orders,customers,products,categories;
+var orders,customers,products,categories,wishlist;
 function loadData(){
   try{
     var o=localStorage.getItem('hoshi_orders');
@@ -612,11 +658,14 @@ function loadData(){
     customers=c?JSON.parse(c):defaultCustomers;
     products=p?JSON.parse(p):defaultProducts;
     categories=cat?JSON.parse(cat):['連線','預購'];
+    var w=localStorage.getItem('hoshi_wishlist');
+    wishlist=w?JSON.parse(w):[];
   }catch(e){
     orders=defaultOrders;
     customers=defaultCustomers;
     products=defaultProducts;
     categories=['連線','預購'];
+    wishlist=[];
   }
 }
 loadData();
@@ -630,7 +679,7 @@ function showTab(t,btn){
   if(t==='buylist')renderBuylist();
   if(t==='profit')recalcProfit();
   if(t==='customers')renderCustomers();
-  if(t==='products')renderProducts();
+  if(t==='wishlist')renderWishlist();
   if(t==='new'){refreshCustomerSelect();refreshProductSelect();refreshCategorySelect();}
   window.scrollTo(0,0);
 }
@@ -861,6 +910,103 @@ function recalcOrderPrice(){
   var totalQty=specs.reduce(function(s,r){return s+r.qty;},0);
   document.getElementById('n-price').value=currentUnitPrice*totalQty;
   document.getElementById('n-unit-price-hint').textContent='單價 NT$'+currentUnitPrice.toLocaleString()+' × '+totalQty;
+}
+
+/* ── 許願清單 ── */
+var currentWishImg='';
+function renderWishlist(){
+  var el=document.getElementById('wish-list');
+  if(!wishlist.length){el.innerHTML='<div class="empty">尚無許願商品，點右上角新增</div>';return;}
+  el.innerHTML=wishlist.map(function(w){
+    return '<div class="wish-card">'
+      +(w.img
+        ?'<img class="wish-img" src="'+w.img+'" alt="">'
+        :'<div class="wish-img-placeholder">🛍️</div>')
+      +'<div class="wish-body">'
+      +'<div class="wish-name">'+w.name+'</div>'
+      +(w.note?'<div class="wish-note">'+w.note+'</div>':'')
+      +(w.url?'<a class="wish-url" href="'+w.url+'" target="_blank">🔗 '+w.url+'</a>':'')
+      +'<div class="wish-actions">'
+      +'<button class="btn" style="font-size:12px;padding:8px" onclick="wishToProduct(\''+w.id+'\')">→ 轉為商品</button>'
+      +'<button class="btn" onclick="editWish(\''+w.id+'\')">編輯</button>'
+      +'<button class="btn danger" onclick="deleteWish(\''+w.id+'\')">刪除</button>'
+      +'</div></div></div>';
+  }).join('');
+}
+function openWishModal(id){
+  currentWishImg='';
+  document.getElementById('wm-name').value='';
+  document.getElementById('wm-note').value='';
+  document.getElementById('wm-url').value='';
+  document.getElementById('wm-img-data').value='';
+  document.getElementById('wm-edit-id').value=id||'';
+  document.getElementById('wish-modal-title').textContent=id?'編輯許願商品':'新增許願商品';
+  document.getElementById('wish-upload-area').style.display='block';
+  document.getElementById('wish-img-preview-wrap').style.display='none';
+  document.getElementById('wish-img-input').value='';
+  if(id){
+    var w=wishlist.find(x=>x.id===id);
+    if(w){
+      document.getElementById('wm-name').value=w.name||'';
+      document.getElementById('wm-note').value=w.note||'';
+      document.getElementById('wm-url').value=w.url||'';
+      if(w.img){
+        currentWishImg=w.img;
+        document.getElementById('wish-img-preview').src=w.img;
+        document.getElementById('wish-img-preview-wrap').style.display='block';
+        document.getElementById('wish-upload-area').style.display='none';
+      }
+    }
+  }
+  document.getElementById('wish-modal').style.display='flex';
+}
+function editWish(id){openWishModal(id);}
+function closeWishModal(){document.getElementById('wish-modal').style.display='none';}
+function onWishImageSelected(e){
+  var file=e.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    currentWishImg=ev.target.result;
+    document.getElementById('wish-img-preview').src=currentWishImg;
+    document.getElementById('wish-img-preview-wrap').style.display='block';
+    document.getElementById('wish-upload-area').style.display='none';
+  };
+  reader.readAsDataURL(file);
+}
+function clearWishImage(){
+  currentWishImg='';
+  document.getElementById('wish-img-preview-wrap').style.display='none';
+  document.getElementById('wish-upload-area').style.display='block';
+  document.getElementById('wish-img-input').value='';
+}
+function saveWish(){
+  var name=document.getElementById('wm-name').value.trim();
+  if(!name){showToast('請輸入商品名稱');return;}
+  var id=document.getElementById('wm-edit-id').value;
+  var data={name:name,note:document.getElementById('wm-note').value.trim(),url:document.getElementById('wm-url').value.trim(),img:currentWishImg};
+  if(id){
+    var w=wishlist.find(x=>x.id===id);
+    if(w)Object.assign(w,data);
+  }else{
+    data.id='W'+Date.now();
+    wishlist.unshift(data);
+  }
+  saveData();closeWishModal();renderWishlist();
+  showToast(id?'已更新！':'已加入許願清單！');
+}
+function deleteWish(id){
+  var w=wishlist.find(x=>x.id===id);if(!w)return;
+  pendingDeleteId=null;pendingDeleteCustId=null;pendingDeleteProdId=null;
+  pendingDeleteWishId=id;
+  document.getElementById('del-modal-sub').textContent='將刪除許願商品「'+w.name+'」，此操作無法復原。';
+  document.getElementById('del-modal').style.display='flex';
+}
+function wishToProduct(id){
+  var w=wishlist.find(x=>x.id===id);if(!w)return;
+  products.push({id:'P'+Date.now(),name:w.name,spec:'',price:0,brand:'',note:w.url||w.note||''});
+  saveData();refreshProductSelect();
+  showToast('已轉為商品，請至商品頁設定售價');
+  setTimeout(()=>showTab('products',document.querySelectorAll('.nav-btn')[2]),500);
 }
 
 /* ── 商品管理 ── */
@@ -1383,6 +1529,7 @@ function showToast(msg){
 var pendingDeleteId=null;
 var pendingDeleteCustId=null;
 var pendingDeleteProdId=null;
+var pendingDeleteWishId=null;
 function confirmDelete(id){
   var o=orders.find(x=>x.id===id);if(!o)return;
   pendingDeleteCustId=null;pendingDeleteProdId=null;
@@ -1391,19 +1538,22 @@ function confirmDelete(id){
   document.getElementById('del-modal').style.display='flex';
 }
 function closeDelModal(){
-  pendingDeleteId=null;pendingDeleteCustId=null;pendingDeleteProdId=null;
+  pendingDeleteId=null;pendingDeleteCustId=null;pendingDeleteProdId=null;pendingDeleteWishId=null;
   document.getElementById('del-modal').style.display='none';
 }
 function doDelete(){
   if(pendingDeleteId){
     orders=orders.filter(o=>o.id!==pendingDeleteId);
-    closeDelModal();renderOrders(currentFilter);renderRecent();saveData();showToast('訂單已刪除');
+    closeDelModal();renderOrders(currentFilter);saveData();showToast('訂單已刪除');
   }else if(pendingDeleteCustId){
     customers=customers.filter(x=>x.id!==pendingDeleteCustId);
     closeDelModal();renderCustomers();refreshCustomerSelect();saveData();showToast('客戶已刪除');
   }else if(pendingDeleteProdId){
     products=products.filter(x=>x.id!==pendingDeleteProdId);
     closeDelModal();renderProducts();refreshProductSelect();saveData();showToast('商品已刪除');
+  }else if(pendingDeleteWishId){
+    wishlist=wishlist.filter(x=>x.id!==pendingDeleteWishId);
+    closeDelModal();renderWishlist();saveData();showToast('已從許願清單移除');
   }
 }
 calc();refreshCustomerSelect();refreshProductSelect();refreshCategorySelect();renderOrders('all');
