@@ -396,15 +396,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
       <div class="sec-head">
         <span class="sec-title">建立新訂單</span>
       </div>
-      <div class="form-group"><label class="form-label">訂購人</label>
-        <select class="form-select" id="n-name">
-          <option value="">— 請選擇客戶 —</option>
-        </select>
+      <!-- 訂購人搜尋選單 -->
+      <div class="form-group">
+        <label class="form-label">訂購人</label>
+        <div style="position:relative">
+          <input class="form-input" id="n-name-input" type="text" placeholder="輸入姓名搜尋…" autocomplete="off"
+            oninput="filterDropdown('n-name','n-name-input',customers,'name','name')"
+            onfocus="showDropdown('n-name')"
+            onblur="setTimeout(()=>hideDropdown('n-name'),180)">
+          <div id="n-name-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius-sm);z-index:20;max-height:200px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.1)"></div>
+        </div>
+        <input type="hidden" id="n-name">
       </div>
-      <div class="form-group"><label class="form-label">商品</label>
-        <select class="form-select" id="n-product" onchange="onProductSelect()">
-          <option value="">— 請選擇商品 —</option>
-        </select>
+      <!-- 商品搜尋選單 -->
+      <div class="form-group">
+        <label class="form-label">商品</label>
+        <div style="position:relative">
+          <input class="form-input" id="n-product-input" type="text" placeholder="輸入商品名稱搜尋…" autocomplete="off"
+            oninput="filterDropdown('n-product','n-product-input',products,'name','id')"
+            onfocus="showDropdown('n-product')"
+            onblur="setTimeout(()=>hideDropdown('n-product'),180)">
+          <div id="n-product-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius-sm);z-index:20;max-height:200px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.1)"></div>
+        </div>
+        <input type="hidden" id="n-product">
       </div>
       <div class="two-col">
         <div class="form-group"><label class="form-label">數量</label><input class="form-input" id="n-qty" type="number" inputmode="numeric" min="1" value="1"></div>
@@ -645,28 +659,64 @@ function deleteCust(id){
   document.getElementById('del-modal-sub').textContent='將刪除客戶「'+c.name+'」，此操作無法復原。';
   document.getElementById('del-modal').style.display='flex';
 }
-function refreshCustomerSelect(){
-  var sel=document.getElementById('n-name');
-  var prev=sel.value;
-  sel.innerHTML='<option value="">— 請選擇客戶 —</option>';
-  customers.forEach(function(c){
-    var opt=document.createElement('option');
-    opt.value=c.name;opt.textContent=c.name;
-    sel.appendChild(opt);
+/* ── 搜尋下拉選單 ── */
+function showDropdown(field){
+  // field = 'n-name' or 'n-product'
+  var isProduct=field==='n-product';
+  var list=isProduct?products:customers;
+  var labelKey='name';
+  var valueKey=isProduct?'id':'name';
+  _renderDropdown(field,list,labelKey,valueKey,document.getElementById(field+'-input').value);
+  document.getElementById(field+'-dropdown').style.display='block';
+}
+function hideDropdown(field){
+  document.getElementById(field+'-dropdown').style.display='none';
+}
+function filterDropdown(field,inputId,list,labelKey,valueKey){
+  var q=document.getElementById(inputId).value.toLowerCase();
+  _renderDropdown(field,list,labelKey,valueKey,q);
+  document.getElementById(field+'-dropdown').style.display='block';
+}
+function _renderDropdown(field,list,labelKey,valueKey,q){
+  var dd=document.getElementById(field+'-dropdown');
+  var isProduct=field==='n-product';
+  var filtered=q?list.filter(function(i){return i[labelKey].toLowerCase().includes(q);}):list;
+  if(!filtered.length){
+    dd.innerHTML='<div style="padding:12px;font-size:13px;color:var(--text3);text-align:center">無符合結果</div>';
+    return;
+  }
+  dd.innerHTML='';
+  filtered.forEach(function(i){
+    var label=isProduct?(i.name+(i.spec?' · '+i.spec:'')+(i.price?' — NT$'+Number(i.price).toLocaleString():'')):i[labelKey];
+    var displayName=i.name;
+    var div=document.createElement('div');
+    div.style.cssText='padding:11px 14px;font-size:14px;cursor:pointer;border-bottom:0.5px solid var(--border);color:var(--text)';
+    div.textContent=label;
+    div.dataset.field=field;
+    div.dataset.value=String(i[valueKey]);
+    div.dataset.label=displayName;
+    div.addEventListener('mousedown',function(e){e.preventDefault();selectDropdownItem(this.dataset.field,this.dataset.value,this.dataset.label);});
+    div.addEventListener('touchstart',function(e){e.preventDefault();selectDropdownItem(this.dataset.field,this.dataset.value,this.dataset.label);},{passive:false});
+    dd.appendChild(div);
   });
-  if(prev)sel.value=prev;
+}
+function escQ(s){return String(s).replace(/'/g,"\\'");}
+function selectDropdownItem(field,value,label){
+  document.getElementById(field).value=value;
+  document.getElementById(field+'-input').value=label;
+  hideDropdown(field);
+  if(field==='n-product')onProductSelect();
+}
+function refreshCustomerSelect(){
+  // 清空舊值（搜尋模式不需要預填 option，只確保隱藏值清空）
+  var inp=document.getElementById('n-name-input');
+  var hid=document.getElementById('n-name');
+  if(inp&&!hid.value){inp.value='';hid.value='';}
 }
 function refreshProductSelect(){
-  var sel=document.getElementById('n-product');
-  var prev=sel.value;
-  sel.innerHTML='<option value="">— 請選擇商品 —</option>';
-  products.forEach(function(p){
-    var opt=document.createElement('option');
-    opt.value=p.id;
-    opt.textContent=p.name+(p.spec?' · '+p.spec:'');
-    sel.appendChild(opt);
-  });
-  if(prev)sel.value=prev;
+  var inp=document.getElementById('n-product-input');
+  var hid=document.getElementById('n-product');
+  if(inp&&!hid.value){inp.value='';hid.value='';}
 }
 function onProductSelect(){
   var id=document.getElementById('n-product').value;
@@ -754,8 +804,8 @@ function deleteProduct(id){
 }
 function useProduct(id){
   var p=products.find(x=>x.id===id);if(!p)return;
-  refreshCustomerSelect();refreshProductSelect();
   document.getElementById('n-product').value=id;
+  document.getElementById('n-product-input').value=p.name+(p.spec?' · '+p.spec:'');
   document.getElementById('n-spec').value=p.spec||'';
   document.getElementById('n-price').value=p.price||'';
   showTab('new',null);
@@ -1055,8 +1105,11 @@ function createOrder(){
     price:'NT$'+total.toLocaleString(),status:'wait',
     note:document.getElementById('n-note').value,date:today});
   saveData();showToast('訂單 '+id+' 已建立！');
+  // 清空所有欄位（含搜尋輸入框）
   document.getElementById('n-name').value='';
+  document.getElementById('n-name-input').value='';
   document.getElementById('n-product').value='';
+  document.getElementById('n-product-input').value='';
   ['n-spec','n-price','n-note'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('n-qty').value='1';
   setTimeout(()=>showTab('orders',document.querySelectorAll('.nav-btn')[1]),600);
