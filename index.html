@@ -215,35 +215,70 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
 <div class="app">
   <div class="topbar">
     <div class="topbar-title">📦 Hoshi Select</div>
-    <span class="topbar-badge">業者版</span>
   </div>
   <div class="nav">
-    <button class="nav-btn active" onclick="showTab('home',this)"><span class="nav-icon">🏠</span>總覽</button>
-    <button class="nav-btn" onclick="showTab('orders',this)"><span class="nav-icon">📋</span>訂單</button>
-    <button class="nav-btn" onclick="showTab('buylist',this)"><span class="nav-icon">🛒</span>採買</button>
-    <button class="nav-btn" onclick="showTab('customers',this)"><span class="nav-icon">👥</span>客戶</button>
+    <button class="nav-btn active" onclick="showTab('home',this)"><span class="nav-icon">✏️</span>新增</button>
+    <button class="nav-btn" onclick="showTab('calc',this)"><span class="nav-icon">🧮</span>計算</button>
     <button class="nav-btn" onclick="showTab('products',this)"><span class="nav-icon">🏷️</span>商品</button>
-    <button class="nav-btn" onclick="showTab('calc',this)"><span class="nav-icon">🧮</span>費用</button>
+    <button class="nav-btn" onclick="showTab('buylist',this)"><span class="nav-icon">🛒</span>採買</button>
+    <button class="nav-btn" onclick="showTab('orders',this)"><span class="nav-icon">📋</span>訂單</button>
+    <button class="nav-btn" onclick="showTab('customers',this)"><span class="nav-icon">👥</span>客戶</button>
     <button class="nav-btn" onclick="showTab('profit',this)"><span class="nav-icon">💰</span>利潤</button>
   </div>
   <div class="content">
-    <!-- 總覽 -->
+    <!-- 快速新增訂單 -->
     <div id="tab-home" class="section visible">
-      <div style="margin-bottom:16px">
-        <div style="font-size:17px;font-weight:600;color:var(--text)">早安，業者 👋</div>
-        <div style="font-size:13px;color:var(--text2);margin-top:3px" id="home-date"></div>
+      <div class="sec-head" style="margin-bottom:18px">
+        <span class="sec-title">新增訂單</span>
+        <div style="font-size:12px;color:var(--text3)" id="home-date"></div>
       </div>
-      <div class="sec-head"><span class="sec-title">最新動態</span></div>
-      <div id="recent-list"></div>
+      <!-- 訂購人 -->
+      <div class="form-group">
+        <label class="form-label">訂購人</label>
+        <div style="position:relative">
+          <input class="form-input" id="n-name-input" type="text" placeholder="輸入姓名搜尋…" autocomplete="off"
+            oninput="filterDropdown('n-name','n-name-input',customers,'name','name')"
+            onfocus="showDropdown('n-name')"
+            onblur="setTimeout(()=>hideDropdown('n-name'),180)">
+          <div id="n-name-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius-sm);z-index:20;max-height:200px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.1)"></div>
+        </div>
+        <input type="hidden" id="n-name">
+      </div>
+      <!-- 商品 -->
+      <div class="form-group">
+        <label class="form-label">商品</label>
+        <div style="position:relative">
+          <input class="form-input" id="n-product-input" type="text" placeholder="輸入商品名稱搜尋…" autocomplete="off"
+            oninput="filterDropdown('n-product','n-product-input',products,'name','id')"
+            onfocus="showDropdown('n-product')"
+            onblur="setTimeout(()=>hideDropdown('n-product'),180)">
+          <div id="n-product-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius-sm);z-index:20;max-height:200px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.1)"></div>
+        </div>
+        <input type="hidden" id="n-product">
+      </div>
+      <!-- 分類 -->
+      <div class="form-group"><label class="form-label">分類</label>
+        <div style="display:flex;gap:8px">
+          <select class="form-select" id="n-category" style="flex:1"></select>
+          <button class="btn" style="flex:none;padding:10px 14px;font-size:12px" onclick="openCategoryModal()">管理</button>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="form-group"><label class="form-label">數量</label><input class="form-input" id="n-qty" type="number" inputmode="numeric" min="1" value="1"></div>
+        <div class="form-group"><label class="form-label">規格</label><input class="form-input" id="n-spec" type="text" placeholder="如：US10 黑"></div>
+      </div>
+      <div class="form-group"><label class="form-label">價格（NT$）</label><input class="form-input" id="n-price" type="number" inputmode="numeric" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">備註</label><input class="form-input" id="n-note" type="text" placeholder="顏色、連結、特殊需求…"></div>
+      <button class="btn primary" style="width:100%;padding:15px;font-size:15px" onclick="createOrder()">建立訂單</button>
     </div>
     <!-- 訂單 -->
     <div id="tab-orders" class="section">
-      <div class="sec-head"><span class="sec-title">所有訂單</span><div style="display:flex;align-items:center;gap:10px"><span style="font-size:13px;color:var(--text2)" id="order-count"></span><button class="btn" style="flex:none;padding:7px 14px;font-size:12px;background:var(--text);color:var(--bg);border-color:transparent" onclick="showTab('new',null);document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'))">＋ 新增</button></div></div>
+      <div class="sec-head"><span class="sec-title">所有訂單</span><span style="font-size:13px;color:var(--text2)" id="order-count"></span></div>
       <div class="filter-bar">
         <button class="filter-btn active" onclick="filterOrders('all',this)">全部</button>
-        <button class="filter-btn" onclick="filterOrders('wait',this)">待付款</button>
-        <button class="filter-btn" onclick="filterOrders('proc',this)">採購中</button>
-        <button class="filter-btn" onclick="filterOrders('ship',this)">出貨中</button>
+        <button class="filter-btn" onclick="filterOrders('wait',this)">待採購</button>
+        <button class="filter-btn" onclick="filterOrders('proc',this)">待確認</button>
+        <button class="filter-btn" onclick="filterOrders('ship',this)">待付款</button>
         <button class="filter-btn" onclick="filterOrders('done',this)">已完成</button>
       </div>
       <div id="order-list"></div>
@@ -332,7 +367,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
               <span style="color:var(--bg);font-size:10px">✓</span>
             </div>
           </div>
-          <div style="font-size:11px;color:var(--text2);margin-bottom:8px">商品原價 × 自設匯率<br>＋國際運費＋其他費用</div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px">商品原價 × 自設匯率</div>
           <div class="calc-row" style="margin-bottom:8px"><span class="calc-label" style="font-size:11px">原價（<span id="b-cur-unit">¥</span>）</span><input class="calc-input" id="b-price" type="number" inputmode="numeric" placeholder="0" oninput="calc()" style="width:72px;font-size:13px" onclick="event.stopPropagation()"></div>
           <div class="calc-row"><span class="calc-label" style="font-size:11px">匯率</span><input class="calc-input" id="b-rate" type="number" inputmode="decimal" value="0.22" step="0.001" oninput="calc()" style="width:72px;font-size:13px" onclick="event.stopPropagation()"></div>
           <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center">
@@ -353,7 +388,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
     </div>
     <!-- 利潤計算 -->
     <div id="tab-profit" class="section">
-      <div class="sec-head"><span class="sec-title">利潤計算</span><button class="btn" style="flex:none;padding:7px 14px;font-size:12px" onclick="clearProfit()">清除全部</button></div>
+      <div class="sec-head"><span class="sec-title">利潤計算</span><div style="display:flex;gap:8px"><button class="btn success" style="flex:none;padding:7px 14px;font-size:12px" onclick="exportExcel()">📊 匯出 Excel</button><button class="btn" style="flex:none;padding:7px 14px;font-size:12px" onclick="clearProfit()">清除全部</button></div></div>
       <div class="profit-summary">
         <div class="profit-big" id="p-net">NT$0</div>
         <div style="font-size:13px;color:var(--text2);margin-bottom:16px" id="p-net-sub">總淨利潤</div>
@@ -391,43 +426,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
       </div>
       <div id="cust-list"><div class="empty">尚無客戶資料</div></div>
     </div>
-    <!-- 新增訂單 (hidden, accessible from scan) -->
-    <div id="tab-new" class="section">
-      <div class="sec-head">
-        <span class="sec-title">建立新訂單</span>
-      </div>
-      <!-- 訂購人搜尋選單 -->
-      <div class="form-group">
-        <label class="form-label">訂購人</label>
-        <div style="position:relative">
-          <input class="form-input" id="n-name-input" type="text" placeholder="輸入姓名搜尋…" autocomplete="off"
-            oninput="filterDropdown('n-name','n-name-input',customers,'name','name')"
-            onfocus="showDropdown('n-name')"
-            onblur="setTimeout(()=>hideDropdown('n-name'),180)">
-          <div id="n-name-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius-sm);z-index:20;max-height:200px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.1)"></div>
-        </div>
-        <input type="hidden" id="n-name">
-      </div>
-      <!-- 商品搜尋選單 -->
-      <div class="form-group">
-        <label class="form-label">商品</label>
-        <div style="position:relative">
-          <input class="form-input" id="n-product-input" type="text" placeholder="輸入商品名稱搜尋…" autocomplete="off"
-            oninput="filterDropdown('n-product','n-product-input',products,'name','id')"
-            onfocus="showDropdown('n-product')"
-            onblur="setTimeout(()=>hideDropdown('n-product'),180)">
-          <div id="n-product-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius-sm);z-index:20;max-height:200px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.1)"></div>
-        </div>
-        <input type="hidden" id="n-product">
-      </div>
-      <div class="two-col">
-        <div class="form-group"><label class="form-label">數量</label><input class="form-input" id="n-qty" type="number" inputmode="numeric" min="1" value="1"></div>
-        <div class="form-group"><label class="form-label">規格</label><input class="form-input" id="n-spec" type="text" placeholder="如：US10 黑"></div>
-      </div>
-      <div class="form-group"><label class="form-label">價格（NT$）</label><input class="form-input" id="n-price" type="number" inputmode="numeric" placeholder="0"></div>
-      <div class="form-group"><label class="form-label">備註</label><input class="form-input" id="n-note" type="text" placeholder="顏色、連結、特殊需求…"></div>
-      <button class="btn primary" style="width:100%;padding:15px;font-size:15px" onclick="createOrder()">建立訂單</button>
-    </div>
   </div>
 </div>
 <!-- 訂單圖片 Modal -->
@@ -436,10 +434,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
     <div class="modal-handle"></div>
     <div class="modal-title"><span>訂單圖片預覽</span><button class="modal-close" onclick="closeModal()">關閉</button></div>
     <div class="order-img-card" id="order-img-card" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.15);margin-bottom:16px">
-      <div class="oic-header"><div class="oic-shop">Hoshi Select</div><div class="oic-title" id="oic-name">—</div><div class="oic-id" id="oic-date">—</div></div>
+      <div class="oic-header">
+        <div class="oic-shop" id="oic-category" style="opacity:0.7;letter-spacing:0.6px"></div>
+        <div class="oic-title" id="oic-name">—</div>
+      </div>
       <div id="oic-items-body" style="padding:0 22px"></div>
-      <div class="oic-total-wrap"><div class="oic-total-label">合計應付金額</div><div class="oic-total-val" id="oic-price">—</div></div>
-      <div class="oic-footer"><div class="oic-footer-label" id="oic-footer-date">—</div><div class="oic-footer-brand">Hoshi Select · 業者版</div></div>
+      <div class="oic-total-wrap"><div class="oic-total-label">總金額</div><div class="oic-total-val" id="oic-price">—</div></div>
+      <div class="oic-footer"><div class="oic-footer-label" id="oic-footer-date">—</div><div class="oic-footer-brand">Hoshi Select</div></div>
     </div>
     <div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:12px">長按下方圖片儲存到相簿</div>
     <div id="order-img-rendered" style="display:none;margin-bottom:12px;border-radius:12px;overflow:hidden">
@@ -449,6 +450,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
   </div>
 </div>
 <div class="toast" id="toast"></div>
+
+<!-- 分類管理 Modal -->
+<div class="cust-modal-overlay" id="cat-modal" style="display:none" onclick="if(event.target===this)closeCategoryModal()">
+  <div class="cust-modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title"><span>分類管理</span><button class="modal-close" onclick="closeCategoryModal()">關閉</button></div>
+    <div id="cat-list" style="margin-bottom:16px"></div>
+    <div style="display:flex;gap:8px">
+      <input class="form-input" id="cat-new-name" type="text" placeholder="新分類名稱（如：連線、預購）" style="flex:1">
+      <button class="btn primary" style="flex:none;padding:10px 16px;font-size:13px" onclick="addCategory()">新增</button>
+    </div>
+  </div>
+</div>
 
 <!-- 商品新增/編輯 Modal -->
 <div class="cust-modal-overlay" id="prod-modal" style="display:none" onclick="if(event.target===this)closeProdModal()">
@@ -515,10 +529,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
   </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 var lineChecked={},currentFilter='all',currentCur='jpy';
 var rates={jpy:{rate:0.22,symbol:'¥'},krw:{rate:0.023,symbol:'₩'}};
-var statusMap={wait:{label:'待付款',cls:'b-wait',color:'#EF9F27'},proc:{label:'採購中',cls:'b-proc',color:'#378ADD'},ship:{label:'出貨中',cls:'b-ship',color:'#7F77DD'},done:{label:'已完成',cls:'b-done',color:'#1D9E75'}};
+var statusMap={wait:{label:'待採購',cls:'b-wait',color:'#EF9F27'},proc:{label:'待確認',cls:'b-proc',color:'#378ADD'},ship:{label:'待付款',cls:'b-ship',color:'#7F77DD'},done:{label:'已完成',cls:'b-done',color:'#1D9E75'}};
 var profitItems=[];
 var extraCosts=[];
 var channelMap={line:{label:'官方 LINE',cls:'ch-line'},ig:{label:'Instagram',cls:'ch-ig'},fb:{label:'Facebook',cls:'ch-fb'},friend:{label:'親友介紹',cls:'ch-friend'}};
@@ -548,21 +563,25 @@ function saveData(){
     localStorage.setItem('hoshi_orders',JSON.stringify(orders));
     localStorage.setItem('hoshi_customers',JSON.stringify(customers));
     localStorage.setItem('hoshi_products',JSON.stringify(products));
+    localStorage.setItem('hoshi_categories',JSON.stringify(categories));
   }catch(e){}
 }
-var orders,customers,products;
+var orders,customers,products,categories;
 function loadData(){
   try{
     var o=localStorage.getItem('hoshi_orders');
     var c=localStorage.getItem('hoshi_customers');
     var p=localStorage.getItem('hoshi_products');
+    var cat=localStorage.getItem('hoshi_categories');
     orders=o?JSON.parse(o):defaultOrders;
     customers=c?JSON.parse(c):defaultCustomers;
     products=p?JSON.parse(p):defaultProducts;
+    categories=cat?JSON.parse(cat):['連線','預購'];
   }catch(e){
     orders=defaultOrders;
     customers=defaultCustomers;
     products=defaultProducts;
+    categories=['連線','預購'];
   }
 }
 loadData();
@@ -572,14 +591,60 @@ function showTab(t,btn){
   document.getElementById('tab-'+t).classList.add('visible');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
-  if(t==='orders'){renderOrders(currentFilter);refreshCustomerSelect();}
-  if(t==='home')renderRecent();
+  if(t==='orders'){renderOrders(currentFilter);}
   if(t==='buylist')renderBuylist();
   if(t==='profit')recalcProfit();
   if(t==='customers')renderCustomers();
   if(t==='products')renderProducts();
-  if(t==='new'){refreshCustomerSelect();refreshProductSelect();}
+  if(t==='home'){refreshCustomerSelect();refreshProductSelect();refreshCategorySelect();}
   window.scrollTo(0,0);
+}
+
+/* ── 分類管理 ── */
+function refreshCategorySelect(){
+  var sel=document.getElementById('n-category');
+  var prev=sel.value;
+  sel.innerHTML='<option value="">— 無分類 —</option>';
+  categories.forEach(function(c){
+    var opt=document.createElement('option');
+    opt.value=c;opt.textContent=c;
+    sel.appendChild(opt);
+  });
+  if(prev)sel.value=prev;
+}
+function openCategoryModal(){
+  renderCategoryList();
+  document.getElementById('cat-modal').style.display='flex';
+}
+function closeCategoryModal(){
+  document.getElementById('cat-modal').style.display='none';
+  refreshCategorySelect();
+}
+function renderCategoryList(){
+  var el=document.getElementById('cat-list');
+  if(!categories.length){el.innerHTML='<div class="empty">尚無分類</div>';return;}
+  el.innerHTML=categories.map(function(c,i){
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid var(--border)">'
+      +'<span style="font-size:14px;color:var(--text)">'+c+'</span>'
+      +'<button class="btn danger" style="flex:none;padding:5px 12px;font-size:12px" onclick="deleteCategory('+i+')">刪除</button>'
+      +'</div>';
+  }).join('');
+}
+function addCategory(){
+  var name=document.getElementById('cat-new-name').value.trim();
+  if(!name){showToast('請輸入分類名稱');return;}
+  if(categories.includes(name)){showToast('此分類已存在');return;}
+  categories.push(name);
+  saveData();
+  document.getElementById('cat-new-name').value='';
+  renderCategoryList();
+  showToast('已新增分類「'+name+'」');
+}
+function deleteCategory(i){
+  categories.splice(i,1);
+  saveData();
+  renderCategoryList();
+  showToast('已刪除');
 }
 
 /* ── 客戶資料 ── */
@@ -800,8 +865,7 @@ function useProduct(id){
   document.getElementById('n-product-input').value=p.name+(p.spec?' · '+p.spec:'');
   document.getElementById('n-spec').value=p.spec||'';
   document.getElementById('n-price').value=p.price||'';
-  showTab('new',null);
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  showTab('home',document.querySelectorAll('.nav-btn')[0]);
   showToast('已帶入：'+p.name);
 }
 var selectedPlan='a';
@@ -1005,12 +1069,12 @@ function renderOrders(filter){
     var lines=map[name];
     var totalAmt=lines.reduce(function(s,o){return s+(parseInt((o.price||'').replace(/[^0-9]/g,''))||0);},0);
     html+='<div class="card" style="margin-bottom:12px">';
-    // 客戶標題列
+    var safeName=name.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
     html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
       +'<div style="font-size:16px;font-weight:700;color:var(--text)">'+name+'</div>'
       +'<div style="display:flex;align-items:center;gap:8px">'
       +'<div style="font-size:13px;font-weight:600;color:var(--text)">NT$'+totalAmt.toLocaleString()+'</div>'
-      +'<button class="btn" style="flex:none;padding:5px 11px;font-size:11px" onclick="openCustomerOrderImg(\''+name.replace(/'/g,"\\'")+'\')" >生成圖片</button>'
+      +'<button class="btn" style="flex:none;padding:5px 11px;font-size:11px" data-custname="'+safeName+'" onclick="openCustomerOrderImg(this.dataset.custname)">📄 圖片</button>'
       +'</div></div>';
     // 每筆訂單
     lines.forEach(function(o,i){
@@ -1021,8 +1085,9 @@ function renderOrders(filter){
         +'<div><div style="font-size:14px;font-weight:600;color:var(--text)">'+o.product+'</div>'
         +(o.spec?'<div style="font-size:12px;color:var(--text2);margin-top:1px">'+o.spec+'</div>':'')
         +'</div>'
+        +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
         +'<span class="badge '+s.cls+'">'+s.label+'</span>'
-        +'</div>'
+        +'</div></div>'
         +'<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:8px">'
         +'<span>×'+o.qty+' 件 · '+o.id+'</span>'
         +'<span style="font-weight:600;color:var(--text)">'+o.price+'</span>'
@@ -1036,12 +1101,11 @@ function renderOrders(filter){
   document.getElementById('order-list').innerHTML=html;
 }
 function statusActions(o){
-  var img='<button class="btn" onclick="openOrderImg(\''+o.id+'\')">生成訂單圖片</button>';
   var del='<button class="btn danger" onclick="confirmDelete(\''+o.id+'\')">刪除</button>';
-  if(o.status==='wait') return '<button class="btn" onclick="updateStatus(\''+o.id+'\',\'proc\')">確認採購</button>'+img+del;
-  if(o.status==='proc') return '<button class="btn" onclick="updateStatus(\''+o.id+'\',\'ship\')">標記出貨</button>'+img+del;
-  if(o.status==='ship') return '<button class="btn" onclick="updateStatus(\''+o.id+'\',\'done\')">確認到貨</button>'+img+del;
-  return img+del;
+  if(o.status==='wait') return '<button class="btn" onclick="updateStatus(\''+o.id+'\',\'proc\')">確認採購</button>'+del;
+  if(o.status==='proc') return '<button class="btn" onclick="updateStatus(\''+o.id+'\',\'ship\')">標記出貨</button>'+del;
+  if(o.status==='ship') return '<button class="btn" onclick="updateStatus(\''+o.id+'\',\'done\')">確認到貨</button>'+del;
+  return del;
 }
 function updateStatus(id,ns){
   var o=orders.find(x=>x.id===id);
@@ -1056,18 +1120,22 @@ function openCustomerOrderImg(name){
   if(!custOrders.length)return;
   var totalAmt=custOrders.reduce(function(s,o){return s+(parseInt((o.price||'').replace(/[^0-9]/g,''))||0);},0);
   document.getElementById('oic-name').textContent=name;
-  document.getElementById('oic-date').textContent=new Date().toLocaleDateString('zh-TW');
+  var cats=[...new Set(custOrders.map(o=>o.category).filter(Boolean))];
+  document.getElementById('oic-category').textContent=cats.length?cats.join(' · '):'Hoshi Select';
   document.getElementById('oic-price').textContent='NT$'+totalAmt.toLocaleString();
   document.getElementById('oic-footer-date').textContent='生成時間 '+new Date().toLocaleDateString('zh-TW');
-  // 渲染商品列表
   var body=document.getElementById('oic-items-body');
   body.innerHTML=custOrders.map(function(o,i){
     var s=statusMap[o.status];
     var isLast=i===custOrders.length-1;
+    var statusBg=o.status==='wait'?'#FAEEDA':o.status==='proc'?'#E6F1FB':o.status==='ship'?'#EEEDFE':'#E1F5EE';
+    var statusColor=o.status==='wait'?'#854F0B':o.status==='proc'?'#185FA5':o.status==='ship'?'#534AB7':'#0F6E56';
     return '<div style="padding:12px 0;'+(isLast?'':'border-bottom:1px solid #f0f0f0')+'">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">'
-      +'<div style="font-size:14px;font-weight:600;color:#1a1a1a;flex:1;margin-right:8px">'+o.product+'</div>'
-      +'<span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap;background:'+(o.status==='wait'?'#FAEEDA':o.status==='proc'?'#E6F1FB':o.status==='ship'?'#EEEDFE':'#E1F5EE')+';color:'+(o.status==='wait'?'#854F0B':o.status==='proc'?'#185FA5':o.status==='ship'?'#534AB7':'#0F6E56')+'">'+s.label+'</span>'
+      +'<div style="flex:1;margin-right:8px">'
+      +'<div style="font-size:14px;font-weight:600;color:#1a1a1a">'+o.product+'</div>'
+      +'</div>'
+      +'<span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap;background:'+statusBg+';color:'+statusColor+'">'+s.label+'</span>'
       +'</div>'
       +'<div style="display:flex;justify-content:space-between;align-items:center">'
       +'<span style="font-size:12px;color:#888">'+(o.spec||'無規格')+' · ×'+o.qty+' 件'+(o.note?' · '+o.note:'')+' · '+o.date+'</span>'
@@ -1098,20 +1166,22 @@ function createOrder(){
   var id='ORD-'+(Date.now()%100000);
   var total=parseInt(document.getElementById('n-price').value)||0;
   var today=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'/');
+  var category=document.getElementById('n-category').value||'';
   orders.unshift({id:id,name:name,product:productName,productId:productId,
     qty:parseInt(document.getElementById('n-qty').value)||1,
     spec:document.getElementById('n-spec').value,country:'',
     price:'NT$'+total.toLocaleString(),status:'wait',
+    category:category,
     note:document.getElementById('n-note').value,date:today});
   saveData();showToast('訂單 '+id+' 已建立！');
-  // 清空所有欄位（含搜尋輸入框）
   document.getElementById('n-name').value='';
   document.getElementById('n-name-input').value='';
   document.getElementById('n-product').value='';
   document.getElementById('n-product-input').value='';
+  document.getElementById('n-category').value='';
   ['n-spec','n-price','n-note'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('n-qty').value='1';
-  setTimeout(()=>showTab('orders',document.querySelectorAll('.nav-btn')[1]),600);
+  setTimeout(()=>showTab('orders',document.querySelectorAll('.nav-btn')[4]),600);
 }
 function renderRecent(){
   document.getElementById('recent-list').innerHTML=orders.slice(0,3).map(o=>{
@@ -1122,6 +1192,69 @@ function renderRecent(){
       +'<div class="btn-row">'+statusActions(o)+'</div></div>';
   }).join('');
 }
+/* ── 匯出 Excel ── */
+function exportExcel(){
+  if(typeof XLSX==='undefined'){showToast('Excel 功能載入中，請稍後再試');return;}
+  var wb=XLSX.utils.book_new();
+  var today=new Date().toLocaleDateString('zh-TW');
+
+  // ── Sheet 1：訂單明細 ──
+  var orderRows=[['訂單編號','客戶姓名','商品名稱','規格','數量','金額（NT$）','狀態','分類','備註','日期']];
+  orders.forEach(function(o){
+    var amt=parseInt((o.price||'').replace(/[^0-9]/g,''))||0;
+    orderRows.push([
+      o.id,
+      o.name,
+      o.product,
+      o.spec||'',
+      o.qty||1,
+      amt,
+      statusMap[o.status]?statusMap[o.status].label:o.status,
+      o.category||'',
+      o.note||'',
+      o.date||''
+    ]);
+  });
+  var ws1=XLSX.utils.aoa_to_sheet(orderRows);
+  // 欄寬
+  ws1['!cols']=[{wch:12},{wch:10},{wch:22},{wch:12},{wch:6},{wch:12},{wch:8},{wch:8},{wch:18},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws1,'訂單明細');
+
+  // ── Sheet 2：客戶彙總 ──
+  var custMap={};
+  orders.forEach(function(o){
+    if(!custMap[o.name])custMap[o.name]={name:o.name,count:0,total:0,categories:new Set(),statuses:{}};
+    var c=custMap[o.name];
+    c.count++;
+    c.total+=parseInt((o.price||'').replace(/[^0-9]/g,''))||0;
+    if(o.category)c.categories.add(o.category);
+    var sl=statusMap[o.status]?statusMap[o.status].label:o.status;
+    c.statuses[sl]=(c.statuses[sl]||0)+1;
+  });
+  var summaryRows=[['客戶姓名','訂單筆數','總金額（NT$）','分類','各狀態明細']];
+  Object.values(custMap).forEach(function(c){
+    var statusStr=Object.entries(c.statuses).map(function(e){return e[0]+' '+e[1]+'筆';}).join('、');
+    summaryRows.push([
+      c.name,
+      c.count,
+      c.total,
+      [...c.categories].join('、')||'無',
+      statusStr
+    ]);
+  });
+  // 合計列
+  var grandTotal=Object.values(custMap).reduce(function(s,c){return s+c.total;},0);
+  summaryRows.push(['合計',Object.keys(custMap).length+'位客戶',grandTotal,'','']);
+  var ws2=XLSX.utils.aoa_to_sheet(summaryRows);
+  ws2['!cols']=[{wch:12},{wch:10},{wch:14},{wch:10},{wch:28}];
+  XLSX.utils.book_append_sheet(wb,ws2,'客戶彙總');
+
+  // 下載
+  var filename='Hoshi_Select_'+today.replace(/\//g,'-')+'.xlsx';
+  XLSX.writeFile(wb,filename);
+  showToast('Excel 已下載！');
+}
+
 function showToast(msg){
   var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);
@@ -1152,21 +1285,7 @@ function doDelete(){
     closeDelModal();renderProducts();refreshProductSelect();saveData();showToast('商品已刪除');
   }
 }
-renderRecent();calc();refreshCustomerSelect();refreshProductSelect();
-document.getElementById('home-date').textContent=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
-</script>
-</body>
-</html>
-);
-  }else if(pendingDeleteCustId){
-    customers=customers.filter(x=>x.id!==pendingDeleteCustId);
-    closeDelModal();renderCustomers();refreshCustomerSelect();saveData();showToast('客戶已刪除');
-  }else if(pendingDeleteProdId){
-    products=products.filter(x=>x.id!==pendingDeleteProdId);
-    closeDelModal();renderProducts();refreshProductSelect();saveData();showToast('商品已刪除');
-  }
-}
-renderRecent();calc();refreshCustomerSelect();refreshProductSelect();
+calc();refreshCustomerSelect();refreshProductSelect();refreshCategorySelect();
 document.getElementById('home-date').textContent=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
 </script>
 </body>
