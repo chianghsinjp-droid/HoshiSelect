@@ -1045,10 +1045,13 @@ function deleteWish(id){
 }
 function wishToProduct(id){
   var w=wishlist.find(x=>x.id===id);if(!w)return;
-  products.push({id:'P'+Date.now(),name:w.name,spec:'',price:0,brand:'',note:w.url||w.note||''});
-  saveData();refreshProductSelect();
-  showToast('已轉為商品，請至商品頁設定售價');
-  setTimeout(()=>showTab('products',document.querySelectorAll('.nav-btn')[2]),500);
+  showTab('products',document.querySelectorAll('.nav-btn')[2]);
+  setTimeout(function(){
+    openProductModal();
+    document.getElementById('pm-name').value=w.name||'';
+    document.getElementById('pm-note').value=(w.url||w.note||'');
+  },100);
+  showToast('已帶入商品資料，請確認後儲存');
 }
 
 /* ── 商品管理 ── */
