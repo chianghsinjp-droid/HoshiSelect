@@ -281,17 +281,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
           <button class="btn" style="flex:none;padding:10px 14px;font-size:12px" onclick="openCategoryModal()">管理</button>
         </div>
       </div>
-      <!-- 規格＋數量（可多筆）-->
+      <!-- 規格＋數量＋備註（可多筆）-->
       <div class="form-group">
         <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
           <span>規格 / 數量</span>
           <button type="button" onclick="addSpecRow()" style="background:none;border:none;font-size:12px;color:var(--blue);cursor:pointer;padding:0;font-weight:500">＋ 新增規格</button>
         </label>
         <div id="spec-rows">
-          <div class="spec-row" style="display:flex;gap:8px;margin-bottom:8px">
-            <select class="form-select" id="n-spec-sel" onchange="onSpecSelect()" style="flex:2;display:none"></select>
-            <input class="form-input" id="n-spec" type="text" placeholder="規格（如：黑色 US9）" style="flex:2">
-            <input class="form-input" id="n-qty" type="number" inputmode="numeric" min="1" value="1" placeholder="數量" style="flex:1" oninput="recalcOrderPrice()">
+          <div class="spec-row" style="margin-bottom:12px;padding-bottom:12px;border-bottom:0.5px solid var(--border)">
+            <div style="display:flex;gap:8px;margin-bottom:6px">
+              <select class="form-select" id="n-spec-sel" onchange="onSpecSelect()" style="flex:2;display:none"></select>
+              <input class="form-input" id="n-spec" type="text" placeholder="規格（如：黑色 US9）" style="flex:2">
+              <input class="form-input" id="n-qty" type="number" inputmode="numeric" min="1" value="1" placeholder="數量" style="flex:1" oninput="recalcOrderPrice()">
+            </div>
+            <input class="form-input n-row-note" type="text" placeholder="此規格備註（選填）" style="width:100%;box-sizing:border-box">
           </div>
         </div>
       </div>
@@ -302,7 +305,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
         </label>
         <input class="form-input" id="n-price" type="number" inputmode="numeric" placeholder="0">
       </div>
-      <div class="form-group"><label class="form-label">備註</label><input class="form-input" id="n-note" type="text" placeholder="顏色、連結、特殊需求…"></div>
       <button class="btn primary" style="width:100%;padding:15px;font-size:15px" onclick="createOrder()">建立訂單</button>
     </div>
     <!-- 許願清單 -->
@@ -861,8 +863,7 @@ function addSpecRow(){
   specRowCount++;
   var row=document.createElement('div');
   row.className='spec-row';
-  row.style.cssText='display:flex;gap:8px;margin-bottom:8px;align-items:center';
-  // 如果目前選的商品有多規格，新增列也顯示規格下拉
+  row.style.cssText='margin-bottom:12px;padding-bottom:12px;border-bottom:0.5px solid var(--border)';
   var productId=document.getElementById('n-product').value;
   var p=productId?products.find(x=>x.id===productId):null;
   var variants=p?(p.variants||[{spec:p.spec||'',price:p.price||0}]):null;
@@ -871,14 +872,16 @@ function addSpecRow(){
     var opts=variants.map(function(v,i){
       return '<option value="'+i+'">'+(v.spec||'（無規格）')+'</option>';
     }).join('');
-    specHtml='<select class="form-select" style="flex:2" onchange="onExtraSpecSelect(this)">'
-      +opts+'</select>';
+    specHtml='<select class="form-select" style="flex:2" onchange="onExtraSpecSelect(this)">'+opts+'</select>';
   }else{
     specHtml='<input class="form-input" type="text" placeholder="規格（如：白色 US10）" style="flex:2">';
   }
-  row.innerHTML=specHtml
+  row.innerHTML='<div style="display:flex;gap:8px;margin-bottom:6px">'
+    +specHtml
     +'<input class="form-input" type="number" inputmode="numeric" min="1" value="1" placeholder="數量" style="flex:1" oninput="recalcOrderPrice()">'
-    +'<button type="button" onclick="removeSpecRow(this)" style="background:none;border:none;font-size:18px;color:var(--text3);cursor:pointer;flex-shrink:0;padding:0 4px">✕</button>';
+    +'<button type="button" onclick="removeSpecRow(this)" style="background:none;border:none;font-size:18px;color:var(--text3);cursor:pointer;flex-shrink:0;padding:0 4px">✕</button>'
+    +'</div>'
+    +'<input class="form-input n-row-note" type="text" placeholder="此規格備註（選填）" style="width:100%;box-sizing:border-box">';
   document.getElementById('spec-rows').appendChild(row);
 }
 
@@ -927,8 +930,10 @@ function getSpecRows(){
     }else if(inp){
       spec=inp.value.trim();
     }
+    var noteInp=row.querySelector('.n-row-note');
+    var note=noteInp?noteInp.value.trim():'';
     var qty=parseInt(qtyInp?qtyInp.value:1)||1;
-    result.push({spec:spec,qty:qty,unitPrice:unitPrice});
+    result.push({spec:spec,qty:qty,unitPrice:unitPrice,note:note});
   });
   return result;
 }
@@ -1600,8 +1605,6 @@ function createOrder(){
   var productName=prod?prod.name:productId;
   var today=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'/');
   var category=document.getElementById('n-category').value||'';
-  var note=document.getElementById('n-note').value;
-  var unitPrice=currentUnitPrice||parseInt(document.getElementById('n-price').value)||0;
   var specs=getSpecRows();
   var created=[];
   specs.forEach(function(row){
@@ -1611,7 +1614,7 @@ function createOrder(){
     orders.unshift({id:id,name:name,product:productName,productId:productId,
       qty:row.qty,spec:row.spec,country:'',
       price:'NT$'+rowPrice.toLocaleString(),status:'proc',
-      category:category,note:note,date:today});
+      category:category,note:row.note||'',date:today});
     created.push(id);
   });
   saveData();
@@ -1626,9 +1629,11 @@ function createOrder(){
   document.getElementById('n-spec-sel').style.display='none';
   document.getElementById('n-spec-sel').innerHTML='';
   document.getElementById('n-price').value='';
-  document.getElementById('n-note').value='';
   document.getElementById('n-qty').value='1';
   document.getElementById('n-unit-price-hint').textContent='';
+  // 清空第一列備註
+  var firstNote=document.querySelector('#spec-rows .spec-row .n-row-note');
+  if(firstNote)firstNote.value='';
   currentUnitPrice=0;
   // 移除額外規格列
   var rows=document.querySelectorAll('#spec-rows .spec-row');
