@@ -1610,7 +1610,7 @@ function createOrder(){
     var rowPrice=rowUnitPrice*row.qty;
     orders.unshift({id:id,name:name,product:productName,productId:productId,
       qty:row.qty,spec:row.spec,country:'',
-      price:'NT$'+rowPrice.toLocaleString(),status:'wait',
+      price:'NT$'+rowPrice.toLocaleString(),status:'proc',
       category:category,note:note,date:today});
     created.push(id);
   });
