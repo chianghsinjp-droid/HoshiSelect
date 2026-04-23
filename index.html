@@ -874,10 +874,35 @@ function addSpecRow(){
   var row=document.createElement('div');
   row.className='spec-row';
   row.style.cssText='display:flex;gap:8px;margin-bottom:8px;align-items:center';
-  row.innerHTML='<input class="form-input" type="text" placeholder="規格（如：白色 US10）" style="flex:2">'
+  // 如果目前選的商品有多規格，新增列也顯示規格下拉
+  var productId=document.getElementById('n-product').value;
+  var p=productId?products.find(x=>x.id===productId):null;
+  var variants=p?(p.variants||[{spec:p.spec||'',price:p.price||0}]):null;
+  var specHtml='';
+  if(variants&&variants.length>1){
+    var opts=variants.map(function(v,i){
+      return '<option value="'+i+'">'+(v.spec||'（無規格）')+'</option>';
+    }).join('');
+    specHtml='<select class="form-select" style="flex:2" onchange="onExtraSpecSelect(this)">'
+      +opts+'</select>';
+  }else{
+    specHtml='<input class="form-input" type="text" placeholder="規格（如：白色 US10）" style="flex:2">';
+  }
+  row.innerHTML=specHtml
     +'<input class="form-input" type="number" inputmode="numeric" min="1" value="1" placeholder="數量" style="flex:1" oninput="recalcOrderPrice()">'
     +'<button type="button" onclick="removeSpecRow(this)" style="background:none;border:none;font-size:18px;color:var(--text3);cursor:pointer;flex-shrink:0;padding:0 4px">✕</button>';
   document.getElementById('spec-rows').appendChild(row);
+}
+
+function onExtraSpecSelect(sel){
+  var productId=document.getElementById('n-product').value;
+  var p=productId?products.find(x=>x.id===productId):null;
+  if(!p)return;
+  var variants=p.variants||[{spec:p.spec||'',price:p.price||0}];
+  var idx=parseInt(sel.value)||0;
+  // 更新對應的 hidden n-spec 用於 getSpecRows 時讀取
+  sel.dataset.spec=variants[idx]?variants[idx].spec||'':'';
+  recalcOrderPrice();
 }
 
 function removeSpecRow(btn){
@@ -886,21 +911,36 @@ function removeSpecRow(btn){
 }
 
 function getSpecRows(){
+  var productId=document.getElementById('n-product').value;
+  var p=productId?products.find(x=>x.id===productId):null;
+  var variants=p?(p.variants||[{spec:p.spec||'',price:p.price||0}]):null;
   var rows=document.querySelectorAll('#spec-rows .spec-row');
   var result=[];
   rows.forEach(function(row,idx){
-    var specSel=row.querySelector('select');
-    var specInp=row.querySelector('input[type="text"],input:not([type])');
+    var sel=row.querySelector('select');
+    var inp=row.querySelector('input[type="text"]');
     var qtyInp=row.querySelector('input[type="number"]');
     var spec='';
+    var unitPrice=currentUnitPrice;
     if(idx===0){
-      // 第一列：規格可能是下拉或輸入框
+      // 第一列：讀 n-spec（無論是 input 還是從 n-spec-sel 帶入的）
       spec=document.getElementById('n-spec').value.trim();
-    }else{
-      spec=specInp?specInp.value.trim():'';
+      if(variants&&variants.length>1){
+        var selIdx=parseInt(document.getElementById('n-spec-sel').value)||0;
+        var v=variants[selIdx];
+        if(v){spec=v.spec||'';unitPrice=v.price||0;}
+      }
+    }else if(sel){
+      // 額外列有 select
+      var selIdx=parseInt(sel.value)||0;
+      var v=variants&&variants[selIdx];
+      spec=v?v.spec||'':'';
+      unitPrice=v?v.price||currentUnitPrice:currentUnitPrice;
+    }else if(inp){
+      spec=inp.value.trim();
     }
     var qty=parseInt(qtyInp?qtyInp.value:1)||1;
-    result.push({spec:spec,qty:qty});
+    result.push({spec:spec,qty:qty,unitPrice:unitPrice});
   });
   return result;
 }
@@ -947,11 +987,13 @@ function onSpecSelect(){
   recalcOrderPrice();
 }
 function recalcOrderPrice(){
-  if(!currentUnitPrice)return;
   var specs=getSpecRows();
+  if(!specs.some(r=>r.unitPrice>0)&&!currentUnitPrice)return;
+  var totalAmt=specs.reduce(function(s,r){return s+(r.unitPrice||currentUnitPrice)*r.qty;},0);
   var totalQty=specs.reduce(function(s,r){return s+r.qty;},0);
-  document.getElementById('n-price').value=currentUnitPrice*totalQty;
-  document.getElementById('n-unit-price-hint').textContent='單價 NT$'+currentUnitPrice.toLocaleString()+' × '+totalQty;
+  document.getElementById('n-price').value=totalAmt;
+  var hint=currentUnitPrice?'單價 NT$'+currentUnitPrice.toLocaleString()+' × '+totalQty:'共 '+totalQty+' 件';
+  document.getElementById('n-unit-price-hint').textContent=hint;
 }
 
 /* ── 許願清單 ── */
@@ -1167,6 +1209,10 @@ function useProduct(id){
   document.getElementById('n-product').value=id;
   document.getElementById('n-product-input').value=p.name;
   onProductSelect();
+  var catSel=document.getElementById('n-category');
+  for(var i=0;i<catSel.options.length;i++){
+    if(catSel.options[i].value==='連線'){catSel.selectedIndex=i;break;}
+  }
   showTab('new',null);
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   showToast('已帶入：'+p.name);
@@ -1532,7 +1578,8 @@ function createOrder(){
   var created=[];
   specs.forEach(function(row){
     var id='ORD-'+(Date.now()%100000)+'-'+Math.floor(Math.random()*100);
-    var rowPrice=unitPrice?unitPrice*row.qty:Math.round((parseInt(document.getElementById('n-price').value)||0)/specs.reduce(function(s,r){return s+r.qty;},0))*row.qty;
+    var rowUnitPrice=row.unitPrice||currentUnitPrice||0;
+    var rowPrice=rowUnitPrice*row.qty;
     orders.unshift({id:id,name:name,product:productName,productId:productId,
       qty:row.qty,spec:row.spec,country:'',
       price:'NT$'+rowPrice.toLocaleString(),status:'wait',
