@@ -39,6 +39,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
 .b-wait{background:#FAEEDA;color:#854F0B}
 .b-proc{background:#E6F1FB;color:#185FA5}
 .b-ship{background:#EEEDFE;color:#534AB7}
+.b-sent{background:#F9EAFD;color:#B84FCE}
 .b-done{background:#E1F5EE;color:#0F6E56}
 .row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px}
 .row:last-child{border:none}
@@ -240,9 +241,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
       <div class="sec-head"><span class="sec-title">所有訂單</span><div style="display:flex;align-items:center;gap:10px"><span style="font-size:13px;color:var(--text2)" id="order-count"></span><button class="btn" style="flex:none;padding:7px 14px;font-size:12px;background:var(--text);color:var(--bg);border-color:transparent" onclick="showTab('new',null);document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'))">＋ 新增</button></div></div>
       <div class="filter-bar">
         <button class="filter-btn active" onclick="filterOrders('all',this)">全部</button>
-        <button class="filter-btn" onclick="filterOrders('wait',this)">待採購</button>
-        <button class="filter-btn" onclick="filterOrders('proc',this)">待確認</button>
-        <button class="filter-btn" onclick="filterOrders('ship',this)">待付款</button>
+        <button class="filter-btn" onclick="filterOrders('ready',this)">準備中</button>
+        <button class="filter-btn" onclick="filterOrders('ship',this)">已出貨</button>
         <button class="filter-btn" onclick="filterOrders('done',this)">已完成</button>
       </div>
       <div id="order-list"></div>
@@ -304,18 +304,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
       </div>
       <div class="form-group"><label class="form-label">備註</label><input class="form-input" id="n-note" type="text" placeholder="顏色、連結、特殊需求…"></div>
       <button class="btn primary" style="width:100%;padding:15px;font-size:15px" onclick="createOrder()">建立訂單</button>
-    </div>
-    <!-- 訂單 -->
-    <div id="tab-orders" class="section">
-      <div class="sec-head"><span class="sec-title">所有訂單</span><span style="font-size:13px;color:var(--text2)" id="order-count"></span></div>
-      <div class="filter-bar">
-        <button class="filter-btn active" onclick="filterOrders('all',this)">全部</button>
-        <button class="filter-btn" onclick="filterOrders('wait',this)">待採購</button>
-        <button class="filter-btn" onclick="filterOrders('proc',this)">待確認</button>
-        <button class="filter-btn" onclick="filterOrders('ship',this)">待付款</button>
-        <button class="filter-btn" onclick="filterOrders('done',this)">已完成</button>
-      </div>
-      <div id="order-list"></div>
     </div>
     <!-- 許願清單 -->
     <div id="tab-wishlist" class="section">
@@ -618,7 +606,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Ar
 <script>
 var lineChecked={},currentFilter='all',currentCur='jpy';
 var rates={jpy:{rate:0.22,symbol:'¥'},krw:{rate:0.023,symbol:'₩'}};
-var statusMap={wait:{label:'待採購',cls:'b-wait',color:'#EF9F27'},proc:{label:'待確認',cls:'b-proc',color:'#378ADD'},ship:{label:'待付款',cls:'b-ship',color:'#7F77DD'},done:{label:'已完成',cls:'b-done',color:'#1D9E75'}};
+var statusMap={wait:{label:'待採購',cls:'b-wait',color:'#EF9F27'},proc:{label:'確認採購',cls:'b-proc',color:'#378ADD'},ship:{label:'已出貨',cls:'b-ship',color:'#B84FCE'},done:{label:'已完成',cls:'b-done',color:'#1D9E75'}};
 var profitItems=[];
 var extraCosts=[];
 var channelMap={line:{label:'官方 LINE',cls:'ch-line'},ig:{label:'Instagram',cls:'ch-ig'},fb:{label:'Facebook',cls:'ch-fb'},friend:{label:'親友介紹',cls:'ch-friend'}};
@@ -680,7 +668,7 @@ function showTab(t,btn){
   document.getElementById('tab-'+t).classList.add('visible');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
-  if(t==='orders')renderOrders(currentFilter);
+  if(t==='orders')renderOrders();
   if(t==='buylist')renderBuylist();
   if(t==='profit')recalcProfit();
   if(t==='customers')renderCustomers();
@@ -1445,11 +1433,14 @@ function toggleLine(id){
 }
 function resetBuylist(){lineChecked={};renderBuylist();showToast('已重置所有勾選');}
 function renderOrders(filter){
-  currentFilter=filter;
-  var filtered=filter==='all'?orders:orders.filter(o=>o.status===filter);
+  if(filter!==undefined)currentFilter=filter;
+  var filtered;
+  if(currentFilter==='ready') filtered=orders.filter(o=>o.status==='wait'||o.status==='proc');
+  else if(currentFilter==='all'||!currentFilter) filtered=orders;
+  else filtered=orders.filter(o=>o.status===currentFilter);
   document.getElementById('order-count').textContent='共 '+filtered.length+' 筆';
   if(!filtered.length){document.getElementById('order-list').innerHTML='<div class="empty">此分類沒有訂單</div>';return;}
-  // 依「客戶 + 分類」分組，key = 姓名___分類
+  // 依「客戶 + 分類」分組
   var map={};
   var keyOrder=[];
   filtered.forEach(function(o){
@@ -1458,7 +1449,6 @@ function renderOrders(filter){
     if(!map[key]){map[key]={name:o.name,category:cat,lines:[]};keyOrder.push(key);}
     map[key].lines.push(o);
   });
-  // 去除重複 key（forEach 保序）
   var seen={};
   keyOrder=keyOrder.filter(function(k){return seen[k]?false:(seen[k]=true);});
   var html='';
@@ -1466,10 +1456,8 @@ function renderOrders(filter){
     var g=map[key];
     var lines=g.lines;
     var totalAmt=lines.reduce(function(s,o){return s+(parseInt((o.price||'').replace(/[^0-9]/g,''))||0);},0);
-    var safeName=g.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-    var safeKey=key.replace(/'/g,"\\'");
+    var safeKey=key.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     html+='<div class="card" style="margin-bottom:12px">';
-    // 標題列：姓名 + 分類標籤 + 金額 + 圖片按鈕
     html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
       +'<div>'
       +'<div style="font-size:16px;font-weight:700;color:var(--text)">'+g.name+'</div>'
@@ -1479,7 +1467,6 @@ function renderOrders(filter){
       +'<div style="font-size:13px;font-weight:600;color:var(--text)">NT$'+totalAmt.toLocaleString()+'</div>'
       +'<button class="btn" style="flex:none;padding:5px 11px;font-size:11px" data-key="'+safeKey+'" onclick="openGroupOrderImg(this.dataset.key)">📄 圖片</button>'
       +'</div></div>';
-    // 每筆訂單
     lines.forEach(function(o,i){
       var s=statusMap[o.status];
       if(i>0)html+='<div style="height:0.5px;background:var(--border);margin:10px 0"></div>';
@@ -1506,16 +1493,17 @@ function statusActions(o){
   var del='<button class="btn danger" onclick="confirmDelete(\''+o.id+'\')">刪除</button>';
   if(o.status==='wait') return '<button class="btn" onclick="updateStatus(\''+o.id+'\',\'proc\')">確認採購</button>'+del;
   if(o.status==='proc') return '<button class="btn" onclick="updateStatus(\''+o.id+'\',\'ship\')">標記出貨</button>'+del;
-  if(o.status==='ship') return '<button class="btn" onclick="updateStatus(\''+o.id+'\',\'done\')">確認到貨</button>'+del;
+  if(o.status==='ship') return '<button class="btn" onclick="updateStatus(\''+o.id+'\',\'done\')">已完成</button>'+del;
   return del;
 }
 function updateStatus(id,ns){
   var o=orders.find(x=>x.id===id);
-  if(o){o.status=ns;renderOrders(currentFilter);saveData();showToast('狀態已更新為：'+statusMap[ns].label);}
+  if(o){o.status=ns;renderOrders();saveData();showToast('狀態已更新為：'+statusMap[ns].label);}
 }
 function filterOrders(f,btn){
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');renderOrders(f);
+  if(btn)btn.classList.add('active');
+  renderOrders(f);
 }
 function openGroupOrderImg(key){
   var parts=key.split('___');
@@ -1701,7 +1689,7 @@ function closeDelModal(){
 function doDelete(){
   if(pendingDeleteId){
     orders=orders.filter(o=>o.id!==pendingDeleteId);
-    closeDelModal();renderOrders(currentFilter);saveData();showToast('訂單已刪除');
+    closeDelModal();renderOrders();saveData();showToast('訂單已刪除');
   }else if(pendingDeleteCustId){
     customers=customers.filter(x=>x.id!==pendingDeleteCustId);
     closeDelModal();renderCustomers();refreshCustomerSelect();saveData();showToast('客戶已刪除');
@@ -1713,7 +1701,7 @@ function doDelete(){
     closeDelModal();renderWishlist();saveData();showToast('已從許願清單移除');
   }
 }
-calc();refreshCustomerSelect();refreshProductSelect();refreshCategorySelect();renderOrders('all');
+calc();refreshCustomerSelect();refreshProductSelect();refreshCategorySelect();renderOrders();
 </script>
 </body>
 </html>
